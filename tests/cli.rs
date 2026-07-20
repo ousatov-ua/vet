@@ -160,6 +160,94 @@ fn exit_zero_pass() {
 }
 
 #[test]
+fn full_output_footer_human_and_file_exists() {
+    let assert = vet()
+        .args(["--color", "never", "exit", "0", "--"])
+        .args(ok_cmd())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Log:"));
+
+    let stdout = String::from_utf8_lossy(&assert.get_output().stdout);
+    let path = extract_log_path(&stdout).expect("Log path in human footer");
+    let name = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .expect("file name");
+    assert!(name.starts_with("vet-"), "name={name}");
+    assert!(name.ends_with(".txt"), "name={name}");
+    assert!(path.is_file(), "transcript missing: {}", path.display());
+    let body = fs::read_to_string(&path).expect("read transcript");
+    assert!(body.contains("vet full output"));
+    assert!(body.contains("claim: exit 0"));
+    let _ = fs::remove_file(&path);
+}
+
+#[test]
+fn full_output_includes_command_streams() {
+    let assert = vet()
+        .args(["--color", "never", "stdout", "contains", "unique-marker-42", "--"])
+        .args(emit_args("unique-marker-42"))
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8_lossy(&assert.get_output().stdout);
+    let path = extract_log_path(&stdout).expect("Log path");
+    let body = fs::read_to_string(&path).expect("read transcript");
+    assert!(body.contains("unique-marker-42"));
+    assert!(body.contains("=== stdout ==="));
+    let _ = fs::remove_file(&path);
+}
+
+#[test]
+fn full_output_jsonl_footer() {
+    let assert = vet()
+        .args(["--format", "jsonl", "exit", "0", "--"])
+        .args(ok_cmd())
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8_lossy(&assert.get_output().stdout);
+    let last = stdout
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .last()
+        .expect("last jsonl line");
+    assert!(
+        last.contains("\"log\""),
+        "jsonl footer missing log: {last}"
+    );
+    assert!(
+        !last.contains("\"note\""),
+        "jsonl footer should not include note: {last}"
+    );
+    // Extract path from "log":"<path>"
+    let path_str = last
+        .split("\"log\"")
+        .nth(1)
+        .and_then(|s| s.split('"').nth(1))
+        .expect("parse log path");
+    let path = Path::new(path_str);
+    assert!(path.is_file(), "transcript missing: {path_str}");
+    let name = path.file_name().and_then(|n| n.to_str()).unwrap();
+    assert!(name.starts_with("vet-") && name.ends_with(".txt"));
+    let _ = fs::remove_file(path);
+}
+
+/// Parse `Log: <path>` from human footer.
+fn extract_log_path(stdout: &str) -> Option<std::path::PathBuf> {
+    for line in stdout.lines() {
+        if let Some(rest) = line.strip_prefix("Log: ") {
+            let p = rest.trim();
+            if !p.is_empty() {
+                return Some(std::path::PathBuf::from(p));
+            }
+        }
+    }
+    None
+}
+
+#[test]
 fn exit_zero_fail() {
     vet()
         .args(["exit", "0", "--"]).args(fail_cmd())

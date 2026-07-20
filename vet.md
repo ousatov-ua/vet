@@ -69,6 +69,20 @@ No plugins, no YAML test framework, no CI runner. Claims only.
 {"claim":"json .status","ok":false,"exit":0,"ms":80,"evidence":"path .status missing"}
 ```
 
+### Log file (important)
+
+Terminal / JSONL claim lines are a **short pass/fail summary**. Every run also
+writes **complete** stdout/stderr of tested commands (plus verdicts) to a unique
+file under the OS temp directory (`std::env::temp_dir` — works on Linux, macOS,
+Windows):
+
+- Path pattern: `<temp>/vet-<unique-hex>.txt`
+- Human footer: `Log: <path>`
+- JSONL final line: `{"log":"<path>"}`
+
+**Humans and agents must read that file** when they need the full output of what
+was tested — not only the one-line PASS/FAIL evidence.
+
 Exit code of `vet`: `0` if all claims pass, `1` if any fail, `2` on usage/runtime error.
 
 ## Why original

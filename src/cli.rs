@@ -53,6 +53,12 @@ EXAMPLES:
   vet -f claims.txt
   vet --format jsonl exit 0 -- true
   vet --timeout 10s exit 0 -- ./slow-tool
+
+FULL OUTPUT:
+  Every run saves complete stdout/stderr to <temp>/vet-<hex>.txt
+  (OS temp dir on Linux, macOS, Windows). Path is printed at the end.
+  Read that file for full detail of what was tested — terminal shows
+  pass/fail only.
 "
 )]
 pub struct Cli {

@@ -6,6 +6,7 @@ mod error;
 mod output;
 mod parse;
 mod run;
+mod transcript;
 mod util;
 
 pub use claims::{
@@ -23,6 +24,7 @@ use output::write_verdict;
 use parse::collect_jobs;
 use std::io::{self, Write};
 use std::time::Duration;
+use transcript::{write_footer, write_transcript, TranscriptJob};
 
 /// Entry used by the binary and integration tests.
 pub fn run_from_args<I, T>(args: I, out: &mut dyn Write, err: &mut dyn Write) -> ExitCode
@@ -94,7 +96,7 @@ fn resolve_color(choice: ColorChoice) -> bool {
     }
 }
 
-/// Run parsed claim jobs; write verdicts; return aggregate exit code.
+/// Run parsed claim jobs; write verdicts; save full transcript; return exit code.
 pub fn run_jobs(
     jobs: &[ClaimJob],
     format: Format,
@@ -108,13 +110,28 @@ pub fn run_jobs(
         output_cap: DEFAULT_OUTPUT_CAP,
     };
     let mut all_ok = true;
+    let mut outcomes: Vec<(Verdict, Option<RunResult>)> = Vec::with_capacity(jobs.len());
+
     for job in jobs {
-        let verdict = evaluate_job(job, &opts)?;
+        let (verdict, run) = evaluate_job(job, &opts)?;
         if !verdict.ok {
             all_ok = false;
         }
         write_verdict(out, format, &verdict, color)?;
+        outcomes.push((verdict, run));
     }
+
+    let transcript_jobs: Vec<TranscriptJob<'_>> = outcomes
+        .iter()
+        .map(|(verdict, run)| TranscriptJob {
+            verdict,
+            run: run.as_ref(),
+        })
+        .collect();
+    let path = write_transcript(&transcript_jobs)?;
+    let jsonl = matches!(format, Format::Jsonl);
+    write_footer(out, &path, jsonl)?;
+
     Ok(if all_ok {
         ExitCode::Success
     } else {
@@ -122,12 +139,16 @@ pub fn run_jobs(
     })
 }
 
-fn evaluate_job(job: &ClaimJob, opts: &RunOptions) -> Result<Verdict> {
+fn evaluate_job(job: &ClaimJob, opts: &RunOptions) -> Result<(Verdict, Option<RunResult>)> {
     match &job.command {
         Some(argv) => {
             let run = run_command_with(argv, opts)?;
-            evaluate(&job.claim, Some(&run))
+            let verdict = evaluate(&job.claim, Some(&run))?;
+            Ok((verdict, Some(run)))
         }
-        None => evaluate(&job.claim, None),
+        None => {
+            let verdict = evaluate(&job.claim, None)?;
+            Ok((verdict, None))
+        }
     }
 }

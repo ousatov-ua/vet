@@ -118,6 +118,20 @@ Each claim produces a `Verdict`:
 
 Process exit: `0` all pass, `1` any fail, `2` usage/parse/spawn/timeout/IO/git-tool error.
 
+### Log file (important)
+
+Human/JSONL claim lines are a **short summary**. Every successful evaluation also
+writes **complete** captured stdout/stderr (plus verdicts) to the OS temp
+directory (`std::env::temp_dir` on Linux, macOS, Windows):
+
+| Item | Value |
+|------|--------|
+| Path | `<temp>/vet-<unique-hex>.txt` |
+| Human footer | `Log: <path>` |
+| JSONL footer | final line `{"log":"<path>"}` |
+
+**Humans and agents should open that path** for full detail of what was tested.
+
 CLI flags (not claim grammar):
 
 | Flag | Notes |
@@ -127,7 +141,7 @@ CLI flags (not claim grammar):
 | `--timeout <duration>` | Kill command after duration (`30s`, `500ms`, …); exit 2 on timeout |
 | `-f` / `--file` | Batch file |
 
-Captured stdout/stderr are capped at 1 MiB per stream (excess discarded).
+Captured stdout/stderr are capped at 1 MiB per stream (excess discarded; truncation is noted in the full output file).
 
 ## Non-goals for v0.1
 

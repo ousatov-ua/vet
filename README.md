@@ -127,6 +127,8 @@ $ vet exit 0 -- cargo test -q
 
 <pre>
 <span style="color:#3fb950;font-weight:700">PASS</span>  exit 0  (true)
+
+Log: /tmp/vet-a1b2c3d4e5f67890.txt
 </pre>
 
 **NOT OK — claim fails** (non-zero process exit; `vet` itself exits `1`)
@@ -137,6 +139,8 @@ $ vet exit 0 -- cargo test -q
 
 <pre>
 <span style="color:#f85149;font-weight:700">FAIL</span>  exit 0  (exit 101)
+
+Log: /tmp/vet-a1b2c3d4e5f67890.txt
 </pre>
 
 More examples:
@@ -145,7 +149,29 @@ More examples:
 <span style="color:#3fb950;font-weight:700">PASS</span>  stdout contains OK  (matched)
 <span style="color:#3fb950;font-weight:700">PASS</span>  git clean  (working tree clean)
 <span style="color:#f85149;font-weight:700">FAIL</span>  json .status  (path .status missing)
+
+Log: /tmp/vet-….txt
 </pre>
+
+### Log file (important)
+
+Terminal lines are a **short pass/fail summary only**. After every run, `vet`
+writes the **complete** captured stdout/stderr (plus verdicts) to a unique file
+in the OS temp directory:
+
+| OS | Temp directory |
+|----|----------------|
+| Linux | usually `/tmp` |
+| macOS | usually `/var/folders/…` or `/tmp` |
+| Windows | `%TEMP%` / `%TMP%` |
+
+Filename pattern: **`vet-<unique-hex>.txt`**.
+
+- **Human:** footer prints `Log: <path>`.
+- **JSONL:** last line is `{"log":"<path>"}`
+
+**Agents and humans should open that path** whenever evidence is insufficient —
+it is the full record of what was tested, not just the one-line claim result.
 
 ### Batch / agent mode
 
@@ -167,6 +193,7 @@ EOF
 | `vet --color auto\|always\|never` | Human color (default `auto`: TTY, no `NO_COLOR`) |
 | `vet --timeout 30s …` | Kill command after duration; exit `2` on timeout |
 | `vet -f claims.txt` | Batch claims from file (`-` = stdin) |
+| Log file | Always written under OS temp as `vet-<hex>.txt`; path at end of output |
 
 No plugins, no YAML test framework, no CI runner. Claims only.
 
