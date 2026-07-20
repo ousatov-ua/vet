@@ -126,10 +126,12 @@ jobs:
           )
           ls -la release-assets
 
+      # GITHUB_TOKEN has contents:write on this repo — HOMEBREW_TAP_TOKEN often
+      # is a fine-grained PAT scoped only to the homebrew-vet tap (403 here).
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           files: |
             release-assets/*.tar.gz
             release-assets/*.zip
@@ -137,6 +139,8 @@ jobs:
           fail_on_unmatched_files: true
           generate_release_notes: true
 
+      # HOMEBREW_TAP_TOKEN must allow: contents write on homebrew-vet, and
+      # contents read on this repo (to fetch release assets for checksums).
       - name: Publish formula to Homebrew tap
         uses: Justintime50/homebrew-releaser@v3
         with:
