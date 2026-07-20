@@ -1,0 +1,152 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*.*.*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build ${{ matrix.id }}
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: linux-amd64
+            runner: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            binary_name: vet
+          - id: darwin-arm64
+            runner: macos-15
+            target: aarch64-apple-darwin
+            binary_name: vet
+          - id: windows-amd64
+            runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            binary_name: vet.exe
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Build release binary
+        shell: bash
+        run: cargo build --release --locked --target "${{ matrix.target }}"
+
+      - name: Smoke test binary
+        shell: bash
+        run: |
+          bin="target/${{ matrix.target }}/release/${{ matrix.binary_name }}"
+          test -f "$bin"
+          "$bin" --version
+          "$bin" --help
+
+      - name: Stage binary
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "dist/${{ matrix.binary_name }}"
+          if [[ "${{ runner.os }}" != "Windows" ]]; then
+            chmod 755 "dist/${{ matrix.binary_name }}"
+            strip "dist/${{ matrix.binary_name }}" || true
+          fi
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: vet-${{ matrix.id }}
+          path: dist/${{ matrix.binary_name }}
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: GitHub Release and Homebrew tap
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download Linux binary
+        uses: actions/download-artifact@v4
+        with:
+          name: vet-linux-amd64
+          path: release-input/linux-amd64
+
+      - name: Download macOS binary
+        uses: actions/download-artifact@v4
+        with:
+          name: vet-darwin-arm64
+          path: release-input/darwin-arm64
+
+      - name: Download Windows binary
+        uses: actions/download-artifact@v4
+        with:
+          name: vet-windows-amd64
+          path: release-input/windows-amd64
+
+      - name: Package release assets
+        id: release-version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+          mkdir -p dist/linux-amd64 dist/darwin-arm64 release-assets
+          install -m 0755 release-input/linux-amd64/vet dist/linux-amd64/vet
+          install -m 0755 release-input/darwin-arm64/vet dist/darwin-arm64/vet
+
+          tar -C dist/linux-amd64 -czf "release-assets/vet-${VERSION}-linux-amd64.tar.gz" vet
+          tar -C dist/darwin-arm64 -czf "release-assets/vet-${VERSION}-darwin-arm64.tar.gz" vet
+          zip -j "release-assets/vet-${VERSION}-windows-amd64.zip" release-input/windows-amd64/vet.exe
+
+          (
+            cd release-assets
+            sha256sum *.tar.gz *.zip > checksums.txt
+          )
+          ls -la release-assets
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          files: |
+            release-assets/*.tar.gz
+            release-assets/*.zip
+            release-assets/checksums.txt
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+
+      - name: Publish formula to Homebrew tap
+        uses: Justintime50/homebrew-releaser@v3
+        with:
+          homebrew_owner: ousatov-ua
+          homebrew_tap: homebrew-vet
+          github_token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          commit_owner: homebrew-releaser
+          commit_email: homebrew-releaser@example.com
+          version: ${{ steps.release-version.outputs.tag }}
+          install: 'bin.install "vet"'
+          test: 'system "#{bin}/vet", "--version"'
+          target_darwin_arm64: true
+          target_linux_amd64: true
