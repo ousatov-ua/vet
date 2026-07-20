@@ -4,7 +4,7 @@ use assert_cmd::cargo::cargo_bin_cmd;
 use assert_cmd::Command;
 use predicates::prelude::*;
 use std::fs;
-use std::os::unix::fs::PermissionsExt;
+use std::path::Path;
 use std::process::Command as StdCommand;
 use tempfile::TempDir;
 
@@ -12,10 +12,148 @@ fn vet() -> Command {
     cargo_bin_cmd!("vet")
 }
 
+/// Exit 0 on this platform.
+fn ok_cmd() -> &'static [&'static str] {
+    #[cfg(windows)]
+    {
+        &["cmd", "/C", "exit", "0"]
+    }
+    #[cfg(not(windows))]
+    {
+        &["true"]
+    }
+}
+
+/// Exit 1 on this platform.
+fn fail_cmd() -> &'static [&'static str] {
+    #[cfg(windows)]
+    {
+        &["cmd", "/C", "exit", "1"]
+    }
+    #[cfg(not(windows))]
+    {
+        &["false"]
+    }
+}
+
+/// Shell form of [`ok_cmd`] for batch claim lines.
+fn ok_cmd_line() -> &'static str {
+    #[cfg(windows)]
+    {
+        "cmd /C exit 0"
+    }
+    #[cfg(not(windows))]
+    {
+        "true"
+    }
+}
+
+/// Shell form of [`fail_cmd`] for batch claim lines.
+fn fail_cmd_line() -> &'static str {
+    #[cfg(windows)]
+    {
+        "cmd /C exit 1"
+    }
+    #[cfg(not(windows))]
+    {
+        "false"
+    }
+}
+
+/// Print `text` to stdout (no extra newline where possible).
+fn emit_args(text: &str) -> Vec<String> {
+    #[cfg(windows)]
+    {
+        // Avoid cmd `echo` quote/space quirks on Windows.
+        vec![
+            "powershell".into(),
+            "-NoProfile".into(),
+            "-Command".into(),
+            format!("[Console]::Out.Write('{text}')"),
+        ]
+    }
+    #[cfg(not(windows))]
+    {
+        vec!["printf".into(), "%s".into(), text.into()]
+    }
+}
+
+/// Sleep for roughly `ms` milliseconds.
+fn sleep_args(ms: u64) -> Vec<String> {
+    #[cfg(windows)]
+    {
+        vec![
+            "powershell".into(),
+            "-NoProfile".into(),
+            "-Command".into(),
+            format!("Start-Sleep -Milliseconds {ms}"),
+        ]
+    }
+    #[cfg(not(windows))]
+    {
+        if ms >= 1000 && ms % 1000 == 0 {
+            vec!["sleep".into(), format!("{}", ms / 1000)]
+        } else {
+            vec!["sleep".into(), format!("{:.3}", ms as f64 / 1000.0)]
+        }
+    }
+}
+
+/// Print a file's contents to stdout.
+fn cat_args(path: &Path) -> Vec<String> {
+    #[cfg(windows)]
+    {
+        vec![
+            "cmd".into(),
+            "/C".into(),
+            "type".into(),
+            path.display().to_string(),
+        ]
+    }
+    #[cfg(not(windows))]
+    {
+        vec!["cat".into(), path.display().to_string()]
+    }
+}
+
+/// Exit with the given status code.
+fn exit_code_cmd(code: i32) -> Vec<String> {
+    #[cfg(windows)]
+    {
+        vec!["cmd".into(), "/C".into(), "exit".into(), code.to_string()]
+    }
+    #[cfg(not(windows))]
+    {
+        vec!["sh".into(), "-c".into(), format!("exit {code}")]
+    }
+}
+
+/// Write `text` to stderr.
+fn emit_stderr_args(text: &str) -> Vec<String> {
+    #[cfg(windows)]
+    {
+        vec![
+            "powershell".into(),
+            "-NoProfile".into(),
+            "-Command".into(),
+            format!("[Console]::Error.Write('{text}')"),
+        ]
+    }
+    #[cfg(not(windows))]
+    {
+        vec![
+            "sh".into(),
+            "-c".into(),
+            format!("printf '%s' '{text}' >&2"),
+        ]
+    }
+}
+
+
 #[test]
 fn exit_zero_pass() {
     vet()
-        .args(["exit", "0", "--", "true"])
+        .args(["exit", "0", "--"]).args(ok_cmd())
         .assert()
         .success()
         .stdout(predicate::str::contains("exit 0"));
@@ -24,7 +162,7 @@ fn exit_zero_pass() {
 #[test]
 fn exit_zero_fail() {
     vet()
-        .args(["exit", "0", "--", "false"])
+        .args(["exit", "0", "--"]).args(fail_cmd())
         .assert()
         .code(1)
         .stdout(predicate::str::contains("exit 1"));
@@ -33,7 +171,7 @@ fn exit_zero_fail() {
 #[test]
 fn exit_nonzero_pass() {
     vet()
-        .args(["exit", "nonzero", "--", "false"])
+        .args(["exit", "nonzero", "--"]).args(fail_cmd())
         .assert()
         .success();
 }
@@ -41,7 +179,7 @@ fn exit_nonzero_pass() {
 #[test]
 fn exit_nonzero_fail() {
     vet()
-        .args(["exit", "nonzero", "--", "true"])
+        .args(["exit", "nonzero", "--"]).args(ok_cmd())
         .assert()
         .code(1);
 }
@@ -49,7 +187,7 @@ fn exit_nonzero_fail() {
 #[test]
 fn exit_custom_code() {
     vet()
-        .args(["exit", "2", "--", "sh", "-c", "exit 2"])
+        .args(["exit", "2", "--"]).args(exit_code_cmd(2))
         .assert()
         .success();
 }
@@ -57,7 +195,7 @@ fn exit_custom_code() {
 #[test]
 fn stdout_contains() {
     vet()
-        .args(["stdout", "contains", "hello", "--", "echo", "hello world"])
+        .args(["stdout", "contains", "hello", "--"]).args(emit_args("hello world"))
         .assert()
         .success();
 }
@@ -65,14 +203,8 @@ fn stdout_contains() {
 #[test]
 fn stdout_not_contains() {
     vet()
-        .args([
-            "stdout",
-            "!contains",
-            "DEPRECATED",
-            "--",
-            "echo",
-            "all good",
-        ])
+        .args(["stdout", "!contains", "DEPRECATED", "--"])
+        .args(emit_args("all good"))
         .assert()
         .success();
 }
@@ -80,7 +212,7 @@ fn stdout_not_contains() {
 #[test]
 fn stdout_equals() {
     vet()
-        .args(["stdout", "equals", "ping", "--", "printf", "ping"])
+        .args(["stdout", "equals", "ping", "--"]).args(emit_args("ping"))
         .assert()
         .success();
 }
@@ -88,7 +220,7 @@ fn stdout_equals() {
 #[test]
 fn stdout_matches() {
     vet()
-        .args(["stdout", "matches", r"[0-9]+", "--", "echo", "v42"])
+        .args(["stdout", "matches", r"[0-9]+", "--"]).args(emit_args("v42"))
         .assert()
         .success();
 }
@@ -96,7 +228,7 @@ fn stdout_matches() {
 #[test]
 fn invalid_regex_exit_2() {
     vet()
-        .args(["stdout", "matches", "(", "--", "true"])
+        .args(["stdout", "matches", "(", "--"]).args(ok_cmd())
         .assert()
         .code(2)
         .stderr(predicate::str::contains("regex"));
@@ -105,15 +237,8 @@ fn invalid_regex_exit_2() {
 #[test]
 fn stderr_contains() {
     vet()
-        .args([
-            "stderr",
-            "contains",
-            "boom",
-            "--",
-            "sh",
-            "-c",
-            "echo boom >&2",
-        ])
+        .args(["stderr", "contains", "boom", "--"])
+        .args(emit_stderr_args("boom"))
         .assert()
         .success();
 }
@@ -121,15 +246,8 @@ fn stderr_contains() {
 #[test]
 fn json_equals_status() {
     vet()
-        .args([
-            "json",
-            ".status",
-            "==",
-            "healthy",
-            "--",
-            "echo",
-            r#"{"status":"healthy"}"#,
-        ])
+        .args(["json", ".status", "==", "healthy", "--"])
+        .args(emit_args(r#"{"status":"healthy"}"#))
         .assert()
         .success();
 }
@@ -137,13 +255,8 @@ fn json_equals_status() {
 #[test]
 fn json_single_token_expression() {
     vet()
-        .args([
-            "json",
-            r#".status == "healthy""#,
-            "--",
-            "echo",
-            r#"{"status":"healthy"}"#,
-        ])
+        .args(["json", r#".status == "healthy""#, "--"])
+        .args(emit_args(r#"{"status":"healthy"}"#))
         .assert()
         .success();
 }
@@ -151,7 +264,7 @@ fn json_single_token_expression() {
 #[test]
 fn json_truthy() {
     vet()
-        .args(["json", ".ok", "--", "echo", r#"{"ok":true}"#])
+        .args(["json", ".ok", "--"]).args(emit_args(r#"{"ok":true}"#))
         .assert()
         .success();
 }
@@ -159,7 +272,7 @@ fn json_truthy() {
 #[test]
 fn json_missing_path_fails() {
     vet()
-        .args(["json", ".status", "--", "echo", r#"{"other":1}"#])
+        .args(["json", ".status", "--"]).args(emit_args(r#"{"other":1}"#))
         .assert()
         .code(1)
         .stdout(predicate::str::contains("missing"));
@@ -168,7 +281,7 @@ fn json_missing_path_fails() {
 #[test]
 fn json_invalid_body_fails_claim() {
     vet()
-        .args(["json", ".x", "--", "echo", "not-json"])
+        .args(["json", ".x", "--"]).args(emit_args("not-json"))
         .assert()
         .code(1)
         .stdout(predicate::str::contains("invalid json"));
@@ -201,7 +314,7 @@ fn files_not_exist() {
 #[test]
 fn files_rejects_command() {
     vet()
-        .args(["files", "exist", "Cargo.toml", "--", "true"])
+        .args(["files", "exist", "Cargo.toml", "--"]).args(ok_cmd())
         .assert()
         .code(2);
 }
@@ -287,7 +400,7 @@ fn git_not_repo_claim_fail() {
 #[test]
 fn duration_lt_pass() {
     vet()
-        .args(["duration", "lt", "30s", "--", "true"])
+        .args(["duration", "lt", "30s", "--"]).args(ok_cmd())
         .assert()
         .success();
 }
@@ -295,7 +408,7 @@ fn duration_lt_pass() {
 #[test]
 fn duration_lt_fail() {
     vet()
-        .args(["duration", "lt", "1ms", "--", "sleep", "0.05"])
+        .args(["duration", "lt", "1ms", "--"]).args(sleep_args(50))
         .assert()
         .code(1)
         .stdout(predicate::str::contains("took"));
@@ -304,7 +417,7 @@ fn duration_lt_fail() {
 #[test]
 fn jsonl_format() {
     vet()
-        .args(["--format", "jsonl", "exit", "0", "--", "true"])
+        .args(["--format", "jsonl", "exit", "0", "--"]).args(ok_cmd())
         .assert()
         .success()
         .stdout(predicate::str::contains(r#""ok":true"#))
@@ -317,7 +430,11 @@ fn batch_file_mixed() {
     let path = dir.path().join("claims.txt");
     fs::write(
         &path,
-        "exit 0 -- true\nexit 0 -- false\n# comment\nenv set PATH\n",
+        format!(
+            "exit 0 -- {}\nexit 0 -- {}\n# comment\nenv set PATH\n",
+            ok_cmd_line(),
+            fail_cmd_line()
+        ),
     )
     .unwrap();
     vet()
@@ -332,7 +449,11 @@ fn batch_file_mixed() {
 fn batch_stdin() {
     vet()
         .args(["-f", "-", "--format", "jsonl"])
-        .write_stdin("exit 0 -- true\nexit nonzero -- false\n")
+        .write_stdin(format!(
+            "exit 0 -- {}\nexit nonzero -- {}\n",
+            ok_cmd_line(),
+            fail_cmd_line()
+        ))
         .assert()
         .success();
 }
@@ -378,29 +499,16 @@ fn unknown_claim_kind() {
         .stderr(predicate::str::contains("unknown claim"));
 }
 
-/// Integration: script that prints JSON for json claim.
+/// Integration: print JSON via a platform-native file dump for json claim.
 #[test]
 fn script_json_pipeline() {
     let dir = TempDir::new().unwrap();
-    let script = dir.path().join("health.sh");
-    fs::write(
-        &script,
-        "#!/bin/sh\necho '{\"status\":\"healthy\",\"ok\":true}'\n",
-    )
-    .unwrap();
-    let mut perms = fs::metadata(&script).unwrap().permissions();
-    perms.set_mode(0o755);
-    fs::set_permissions(&script, perms).unwrap();
+    let payload = dir.path().join("health.json");
+    fs::write(&payload, r#"{"status":"healthy","ok":true}"#).unwrap();
 
     vet()
-        .args([
-            "json",
-            ".status",
-            "==",
-            "healthy",
-            "--",
-            script.to_str().unwrap(),
-        ])
+        .args(["json", ".status", "==", "healthy", "--"])
+        .args(cat_args(&payload))
         .assert()
         .success();
 }
@@ -408,7 +516,7 @@ fn script_json_pipeline() {
 #[test]
 fn timeout_kills_command_exit_2() {
     vet()
-        .args(["--timeout", "200ms", "exit", "0", "--", "sleep", "5"])
+        .args(["--timeout", "200ms", "exit", "0", "--"]).args(sleep_args(5000))
         .assert()
         .code(2)
         .stderr(predicate::str::contains("timed out"));
@@ -417,7 +525,7 @@ fn timeout_kills_command_exit_2() {
 #[test]
 fn color_never_has_no_ansi() {
     vet()
-        .args(["--color", "never", "exit", "0", "--", "true"])
+        .args(["--color", "never", "exit", "0", "--"]).args(ok_cmd())
         .assert()
         .success()
         .stdout(predicate::str::contains("PASS"))
@@ -437,10 +545,12 @@ fn files_after_double_dash_friendly_error() {
 fn batch_mid_line_comment() {
     let dir = TempDir::new().unwrap();
     let claims = dir.path().join("c.txt");
-    fs::write(&claims, "exit 0 -- true  # trailing comment\ngit clean\n").unwrap();
-    // git clean may pass or fail depending on workspace; only require parse success for first claim path.
     // Use only exit claim for determinism.
-    fs::write(&claims, "exit 0 -- true  # trailing comment\n").unwrap();
+    fs::write(
+        &claims,
+        format!("exit 0 -- {}  # trailing comment\n", ok_cmd_line()),
+    )
+    .unwrap();
     vet()
         .args(["-f", claims.to_str().unwrap()])
         .assert()
