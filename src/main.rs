@@ -1,8 +1,8 @@
-//! `vet` CLI entrypoint.
+//! `vclaim` CLI entrypoint.
 
 use std::io::{self, Write};
 use std::process::ExitCode as StdExitCode;
-use vet::{run_from_args, ExitCode};
+use vclaim::{run_from_args, ExitCode};
 
 fn main() -> StdExitCode {
     let mut stdout = io::stdout().lock();

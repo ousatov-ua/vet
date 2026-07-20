@@ -28,34 +28,34 @@ pub enum ColorChoice {
 /// Claim checker for agent grounding.
 ///
 /// Run one claim:
-///   vet exit 0 -- cargo test
-///   vet stdout contains ok -- ./tool
-///   vet git clean
+///   vclaim exit 0 -- cargo test
+///   vclaim stdout contains ok -- ./tool
+///   vclaim git clean
 ///
 /// Batch:
-///   vet -f claims.txt
-///   cat claims.txt | vet
+///   vclaim -f claims.txt
+///   cat claims.txt | vclaim
 #[derive(Parser, Debug)]
 #[command(
-    name = "vet",
+    name = "vclaim",
     version,
     about = "Claim checker for agent grounding",
     long_about = None,
     after_help = "\
 EXAMPLES:
-  vet exit 0 -- cargo test -q
-  vet stdout contains ok -- ./tool
-  vet json .status == \"healthy\" -- curl -sf localhost/health
-  vet git clean
-  vet files exist README.md
-  vet env set CI
-  vet duration lt 30s -- cargo test
-  vet -f claims.txt
-  vet --format jsonl exit 0 -- true
-  vet --timeout 10s exit 0 -- ./slow-tool
+  vclaim exit 0 -- cargo test -q
+  vclaim stdout contains ok -- ./tool
+  vclaim json .status == \"healthy\" -- curl -sf localhost/health
+  vclaim git clean
+  vclaim files exist README.md
+  vclaim env set CI
+  vclaim duration lt 30s -- cargo test
+  vclaim -f claims.txt
+  vclaim --format jsonl exit 0 -- true
+  vclaim --timeout 10s exit 0 -- ./slow-tool
 
 FULL OUTPUT:
-  Every run saves complete stdout/stderr to <temp>/vet-<hex>.txt
+  Every run saves complete stdout/stderr to <temp>/vclaim-<hex>.txt
   (OS temp dir on Linux, macOS, Windows). Path is printed at the end.
   Read that file for full detail of what was tested — terminal shows
   pass/fail only.
@@ -98,13 +98,13 @@ mod tests {
 
     #[test]
     fn format_value_enum_parses() {
-        let c = Cli::try_parse_from(["vet", "--format", "jsonl", "git", "clean"]).unwrap();
+        let c = Cli::try_parse_from(["vclaim", "--format", "jsonl", "git", "clean"]).unwrap();
         assert_eq!(c.format, Format::Jsonl);
     }
 
     #[test]
     fn color_value_enum_parses() {
-        let c = Cli::try_parse_from(["vet", "--color", "never", "git", "clean"]).unwrap();
+        let c = Cli::try_parse_from(["vclaim", "--color", "never", "git", "clean"]).unwrap();
         assert_eq!(c.color, ColorChoice::Never);
     }
 }

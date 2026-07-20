@@ -1,6 +1,6 @@
 //! Command runner: spawn, capture streams, measure wall-clock duration.
 
-use crate::error::{Result, VetError};
+use crate::error::{Result, VclaimError};
 use std::io::Read;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
@@ -54,7 +54,7 @@ pub fn run_command(argv: &[String]) -> Result<RunResult> {
 /// Run with explicit timeout / output caps.
 pub fn run_command_with(argv: &[String], opts: &RunOptions) -> Result<RunResult> {
     if argv.is_empty() {
-        return Err(VetError::Usage("empty command".into()));
+        return Err(VclaimError::Usage("empty command".into()));
     }
 
     let display = argv.join(" ");
@@ -67,7 +67,7 @@ pub fn run_command_with(argv: &[String], opts: &RunOptions) -> Result<RunResult>
         .stderr(Stdio::piped());
 
     let start = Instant::now();
-    let mut child = cmd.spawn().map_err(|source| VetError::Spawn {
+    let mut child = cmd.spawn().map_err(|source| VclaimError::Spawn {
         command: display.clone(),
         source,
     })?;
@@ -75,11 +75,11 @@ pub fn run_command_with(argv: &[String], opts: &RunOptions) -> Result<RunResult>
     let stdout_pipe = child
         .stdout
         .take()
-        .ok_or_else(|| VetError::Io("missing stdout pipe".into()))?;
+        .ok_or_else(|| VclaimError::Io("missing stdout pipe".into()))?;
     let stderr_pipe = child
         .stderr
         .take()
-        .ok_or_else(|| VetError::Io("missing stderr pipe".into()))?;
+        .ok_or_else(|| VclaimError::Io("missing stderr pipe".into()))?;
 
     let cap = opts.output_cap;
     let stdout_thr = std::thread::spawn(move || read_capped(stdout_pipe, cap));
@@ -88,7 +88,7 @@ pub fn run_command_with(argv: &[String], opts: &RunOptions) -> Result<RunResult>
     let status = match opts.timeout {
         Some(limit) => match child
             .wait_timeout(limit)
-            .map_err(|e| VetError::Io(format!("wait failed for `{display}`: {e}")))?
+            .map_err(|e| VclaimError::Io(format!("wait failed for `{display}`: {e}")))?
         {
             Some(st) => st,
             None => {
@@ -96,7 +96,7 @@ pub fn run_command_with(argv: &[String], opts: &RunOptions) -> Result<RunResult>
                 let _ = child.wait();
                 let _ = stdout_thr.join();
                 let _ = stderr_thr.join();
-                return Err(VetError::Timeout {
+                return Err(VclaimError::Timeout {
                     command: display,
                     limit,
                 });
@@ -104,19 +104,19 @@ pub fn run_command_with(argv: &[String], opts: &RunOptions) -> Result<RunResult>
         },
         None => child
             .wait()
-            .map_err(|e| VetError::Io(format!("wait failed for `{display}`: {e}")))?,
+            .map_err(|e| VclaimError::Io(format!("wait failed for `{display}`: {e}")))?,
     };
 
     let ms = start.elapsed().as_millis() as u64;
 
     let (stdout_bytes, stdout_truncated) = stdout_thr
         .join()
-        .map_err(|_| VetError::Io("stdout reader panicked".into()))?
-        .map_err(|e| VetError::Io(format!("reading stdout of `{display}`: {e}")))?;
+        .map_err(|_| VclaimError::Io("stdout reader panicked".into()))?
+        .map_err(|e| VclaimError::Io(format!("reading stdout of `{display}`: {e}")))?;
     let (stderr_bytes, stderr_truncated) = stderr_thr
         .join()
-        .map_err(|_| VetError::Io("stderr reader panicked".into()))?
-        .map_err(|e| VetError::Io(format!("reading stderr of `{display}`: {e}")))?;
+        .map_err(|_| VclaimError::Io("stderr reader panicked".into()))?
+        .map_err(|e| VclaimError::Io(format!("reading stderr of `{display}`: {e}")))?;
 
     let exit_code = status.code();
     Ok(RunResult {
@@ -186,8 +186,8 @@ mod tests {
 
     #[test]
     fn missing_binary_is_error() {
-        let err = run_command(&["definitely-not-a-binary-xyz-vet".into()]).unwrap_err();
-        assert!(matches!(err, VetError::Spawn { .. }));
+        let err = run_command(&["definitely-not-a-binary-xyz-vclaim".into()]).unwrap_err();
+        assert!(matches!(err, VclaimError::Spawn { .. }));
     }
 
     #[test]
@@ -198,7 +198,7 @@ mod tests {
         };
         let err = run_command_with(&["sleep".into(), "5".into()], &opts).unwrap_err();
         match err {
-            VetError::Timeout { limit, .. } => {
+            VclaimError::Timeout { limit, .. } => {
                 assert_eq!(limit, Duration::from_millis(200));
             }
             other => panic!("expected Timeout, got {other}"),

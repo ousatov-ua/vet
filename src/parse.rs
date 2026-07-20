@@ -5,7 +5,7 @@ use crate::claims::{
     ExitExpect, FilesClaim, GitClaim, JsonClaim, JsonOp, StreamClaim, StreamKind, StreamOp,
 };
 use crate::cli::Cli;
-use crate::error::{Result, VetError};
+use crate::error::{Result, VclaimError};
 use serde_json::Value;
 use std::io::{self, Read};
 use std::path::PathBuf;
@@ -27,7 +27,7 @@ pub fn collect_jobs(cli: &Cli) -> Result<Vec<ClaimJob>> {
             buf
         } else {
             std::fs::read_to_string(path)
-                .map_err(|e| VetError::Io(format!("cannot read {}: {e}", path.display())))?
+                .map_err(|e| VclaimError::Io(format!("cannot read {}: {e}", path.display())))?
         };
         return parse_batch(&text);
     }
@@ -41,8 +41,8 @@ pub fn collect_jobs(cli: &Cli) -> Result<Vec<ClaimJob>> {
                 return parse_batch(&buf);
             }
         }
-        return Err(VetError::Usage(
-            "provide a claim (e.g. `vet exit 0 -- true`) or `-f claims.txt`".into(),
+        return Err(VclaimError::Usage(
+            "provide a claim (e.g. `vclaim exit 0 -- true`) or `-f claims.txt`".into(),
         ));
     }
 
@@ -61,17 +61,17 @@ pub fn parse_batch(text: &str) -> Result<Vec<ClaimJob>> {
         if line.is_empty() {
             continue;
         }
-        let tokens = tokenize(line).map_err(|e| VetError::Parse(format!("line {}: {e}", i + 1)))?;
+        let tokens = tokenize(line).map_err(|e| VclaimError::Parse(format!("line {}: {e}", i + 1)))?;
         let (claim_tokens, command) = split_command(tokens);
         let job = parse_job(&claim_tokens, command).map_err(|e| match e {
-            VetError::Parse(m) => VetError::Parse(format!("line {}: {m}", i + 1)),
-            VetError::Usage(m) => VetError::Usage(format!("line {}: {m}", i + 1)),
+            VclaimError::Parse(m) => VclaimError::Parse(format!("line {}: {m}", i + 1)),
+            VclaimError::Usage(m) => VclaimError::Usage(format!("line {}: {m}", i + 1)),
             other => other,
         })?;
         jobs.push(job);
     }
     if jobs.is_empty() {
-        return Err(VetError::Usage("no claims found in input".into()));
+        return Err(VclaimError::Usage("no claims found in input".into()));
     }
     Ok(jobs)
 }
@@ -80,7 +80,7 @@ pub fn parse_batch(text: &str) -> Result<Vec<ClaimJob>> {
 pub fn parse_line(line: &str) -> Result<ClaimJob> {
     let line = strip_comment(line).trim();
     if line.is_empty() {
-        return Err(VetError::Usage("empty claim".into()));
+        return Err(VclaimError::Usage("empty claim".into()));
     }
     let tokens = tokenize(line)?;
     let (claim_tokens, command) = split_command(tokens);
@@ -89,7 +89,7 @@ pub fn parse_line(line: &str) -> Result<ClaimJob> {
 
 fn parse_job(claim_tokens: &[String], command: Option<Vec<String>>) -> Result<ClaimJob> {
     if claim_tokens.is_empty() {
-        return Err(VetError::Usage("missing claim".into()));
+        return Err(VclaimError::Usage("missing claim".into()));
     }
 
     // Common footgun: `files exist -- path` moves paths after `--` before claim parse.
@@ -107,7 +107,7 @@ fn parse_job(claim_tokens: &[String], command: Option<Vec<String>>) -> Result<Cl
     match claim.command_policy() {
         CommandPolicy::Required => {
             if command.is_none() {
-                return Err(VetError::Usage(format!(
+                return Err(VclaimError::Usage(format!(
                     "claim `{}` requires a command after `--`",
                     claim.display()
                 )));
@@ -125,7 +125,7 @@ fn parse_job(claim_tokens: &[String], command: Option<Vec<String>>) -> Result<Cl
 }
 
 /// Friendlier errors when workspace claims are written with a command after `--`.
-fn workspace_command_error(claim: &Claim) -> VetError {
+fn workspace_command_error(claim: &Claim) -> VclaimError {
     workspace_command_error_kind(match claim {
         Claim::Files(_) => "files",
         Claim::Env(_) => "env",
@@ -134,7 +134,7 @@ fn workspace_command_error(claim: &Claim) -> VetError {
     })
 }
 
-fn workspace_command_error_kind(kind: &str) -> VetError {
+fn workspace_command_error_kind(kind: &str) -> VclaimError {
     let hint = match kind {
         "files" => {
             "files claims take paths as arguments, not after `--` (try: files exist <path>…)"
@@ -145,7 +145,7 @@ fn workspace_command_error_kind(kind: &str) -> VetError {
         "git" => "git claims do not take a command (try: git clean)",
         _ => "this claim does not accept a command",
     };
-    VetError::Usage(format!("claim `{kind}`: {hint}"))
+    VclaimError::Usage(format!("claim `{kind}`: {hint}"))
 }
 
 fn parse_claim(tokens: &[String]) -> Result<Claim> {
@@ -161,7 +161,7 @@ fn parse_claim(tokens: &[String]) -> Result<Claim> {
         "env" => parse_env(&args),
         "git" => parse_git(&args),
         "duration" => parse_duration(&args),
-        other => Err(VetError::Parse(format!(
+        other => Err(VclaimError::Parse(format!(
             "unknown claim kind `{other}` (expected exit|stdout|stderr|json|files|env|git|duration)"
         ))),
     }
@@ -169,7 +169,7 @@ fn parse_claim(tokens: &[String]) -> Result<Claim> {
 
 fn parse_exit(args: &[&str]) -> Result<Claim> {
     let [raw] = args else {
-        return Err(VetError::Parse(
+        return Err(VclaimError::Parse(
             "exit claim expects one argument: `0`, `nonzero`, or an integer".into(),
         ));
     };
@@ -178,7 +178,7 @@ fn parse_exit(args: &[&str]) -> Result<Claim> {
     } else {
         let code: i32 = raw
             .parse()
-            .map_err(|_| VetError::Parse(format!("invalid exit code `{raw}`")))?;
+            .map_err(|_| VclaimError::Parse(format!("invalid exit code `{raw}`")))?;
         ExitExpect::Code(code)
     };
     Ok(Claim::Exit(ExitClaim { expect }))
@@ -186,7 +186,7 @@ fn parse_exit(args: &[&str]) -> Result<Claim> {
 
 fn parse_stream(kind: StreamKind, args: &[&str]) -> Result<Claim> {
     let [op_s, needle] = args else {
-        return Err(VetError::Parse(format!(
+        return Err(VclaimError::Parse(format!(
             "{} claim expects: contains|!contains|equals|matches NEEDLE",
             kind.as_str()
         )));
@@ -197,7 +197,7 @@ fn parse_stream(kind: StreamKind, args: &[&str]) -> Result<Claim> {
         "equals" => StreamOp::Equals,
         "matches" => StreamOp::Matches,
         other => {
-            return Err(VetError::Parse(format!(
+            return Err(VclaimError::Parse(format!(
                 "unknown {} op `{other}` (contains|!contains|equals|matches)",
                 kind.as_str()
             )));
@@ -214,7 +214,7 @@ fn parse_stream(kind: StreamKind, args: &[&str]) -> Result<Claim> {
 
 fn parse_json(args: &[&str]) -> Result<Claim> {
     if args.is_empty() {
-        return Err(VetError::Parse(
+        return Err(VclaimError::Parse(
             "json claim expects: PATH [exists|== VALUE]".into(),
         ));
     }
@@ -237,7 +237,7 @@ fn parse_json(args: &[&str]) -> Result<Claim> {
             JsonOp::Equals(parse_json_value(&raw)?)
         }
         _ => {
-            return Err(VetError::Parse(
+            return Err(VclaimError::Parse(
                 "json claim expects: PATH | PATH exists | PATH == VALUE".into(),
             ));
         }
@@ -266,7 +266,7 @@ fn parse_json_value(token: &str) -> Result<Value> {
 
 fn parse_files(args: &[&str]) -> Result<Claim> {
     if args.is_empty() {
-        return Err(VetError::Parse(
+        return Err(VclaimError::Parse(
             "files claim expects: exist|!exist PATH…".into(),
         ));
     }
@@ -274,14 +274,14 @@ fn parse_files(args: &[&str]) -> Result<Claim> {
         "exist" | "exists" => true,
         "!exist" | "!exists" => false,
         other => {
-            return Err(VetError::Parse(format!(
+            return Err(VclaimError::Parse(format!(
                 "unknown files op `{other}` (exist|!exist)"
             )));
         }
     };
     let paths: Vec<PathBuf> = args[1..].iter().map(PathBuf::from).collect();
     if paths.is_empty() {
-        return Err(VetError::Parse(
+        return Err(VclaimError::Parse(
             "files claim requires at least one path".into(),
         ));
     }
@@ -293,20 +293,20 @@ fn parse_files(args: &[&str]) -> Result<Claim> {
 
 fn parse_env(args: &[&str]) -> Result<Claim> {
     if args.len() < 2 {
-        return Err(VetError::Parse("env claim expects: set|!set NAME…".into()));
+        return Err(VclaimError::Parse("env claim expects: set|!set NAME…".into()));
     }
     let should_be_set = match args[0] {
         "set" => true,
         "!set" => false,
         other => {
-            return Err(VetError::Parse(format!(
+            return Err(VclaimError::Parse(format!(
                 "unknown env op `{other}` (set|!set)"
             )));
         }
     };
     let names: Vec<String> = args[1..].iter().map(|s| (*s).to_string()).collect();
     if names.iter().any(|n| n.is_empty()) {
-        return Err(VetError::Parse(
+        return Err(VclaimError::Parse(
             "env variable name must be non-empty".into(),
         ));
     }
@@ -318,13 +318,13 @@ fn parse_env(args: &[&str]) -> Result<Claim> {
 
 fn parse_git(args: &[&str]) -> Result<Claim> {
     let [mode] = args else {
-        return Err(VetError::Parse("git claim expects: clean|dirty".into()));
+        return Err(VclaimError::Parse("git claim expects: clean|dirty".into()));
     };
     let claim = match *mode {
         "clean" => GitClaim::Clean,
         "dirty" => GitClaim::Dirty,
         other => {
-            return Err(VetError::Parse(format!(
+            return Err(VclaimError::Parse(format!(
                 "unknown git mode `{other}` (clean|dirty)"
             )));
         }
@@ -334,16 +334,16 @@ fn parse_git(args: &[&str]) -> Result<Claim> {
 
 fn parse_duration(args: &[&str]) -> Result<Claim> {
     let [op_s, limit_s] = args else {
-        return Err(VetError::Parse(
+        return Err(VclaimError::Parse(
             "duration claim expects: lt DURATION (e.g. lt 30s)".into(),
         ));
     };
     if *op_s != "lt" {
-        return Err(VetError::Parse(format!(
+        return Err(VclaimError::Parse(format!(
             "unknown duration op `{op_s}` (only `lt` in v0.1)"
         )));
     }
-    let limit = parse_duration_token(limit_s).map_err(VetError::Parse)?;
+    let limit = parse_duration_token(limit_s).map_err(VclaimError::Parse)?;
     Ok(Claim::Duration(DurationClaim {
         op: DurationOp::Lt,
         limit,
@@ -395,7 +395,7 @@ fn tokenize(input: &str) -> Result<Vec<String>> {
     }
 
     if in_single || in_double {
-        return Err(VetError::Parse("unclosed quote".into()));
+        return Err(VclaimError::Parse("unclosed quote".into()));
     }
     if !cur.is_empty() {
         tokens.push(cur);

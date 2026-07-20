@@ -1,7 +1,7 @@
 //! `stdout` / `stderr` stream claims.
 
 use super::Verdict;
-use crate::error::{Result, VetError};
+use crate::error::{Result, VclaimError};
 use crate::run::RunResult;
 use crate::util::truncate_chars;
 use regex::Regex;
@@ -103,7 +103,7 @@ impl StreamClaim {
     pub fn validate_regex(&self) -> Result<()> {
         if matches!(self.op, StreamOp::Matches) {
             Regex::new(&self.needle)
-                .map_err(|e| VetError::Parse(format!("invalid regex `{}`: {e}", self.needle)))?;
+                .map_err(|e| VclaimError::Parse(format!("invalid regex `{}`: {e}", self.needle)))?;
         }
         Ok(())
     }

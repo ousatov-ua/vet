@@ -126,7 +126,7 @@ directory (`std::env::temp_dir` on Linux, macOS, Windows):
 
 | Item | Value |
 |------|--------|
-| Path | `<temp>/vet-<unique-hex>.txt` |
+| Path | `<temp>/vclaim-<unique-hex>.txt` |
 | Human footer | `Log: <path>` |
 | JSONL footer | final line `{"log":"<path>"}` |
 

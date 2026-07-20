@@ -1,38 +1,37 @@
 <div align="center">
 
 <pre>
-╔══════════════════════════════════════════════════════════╗
-║                                                          ║
-║               ██╗   ██╗ ███████╗ ████████╗               ║
-║               ██║   ██║ ██╔════╝ ╚══██╔══╝               ║
-║               ██║   ██║ █████╗      ██║                  ║
-║               ╚██╗ ██╔╝ ██╔══╝      ██║                  ║
-║                ╚████╔╝  ███████╗    ██║                  ║
-║                 ╚═══╝   ╚══════╝    ╚═╝                  ║
-║                                                          ║
-║                ✓  claim · check · ground                 ║
-║                                                          ║
-╚══════════════════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════════╗
+║                                                      ║
+║   ██    ██  ██████  ██       █████  ██ ███    ███    ║
+║   ██    ██ ██       ██      ██   ██ ██ ████  ████    ║
+║   ██    ██ ██       ██      ███████ ██ ██ ████ ██    ║
+║    ██  ██  ██       ██      ██   ██ ██ ██  ██  ██    ║
+║     ████    ██████  ███████ ██   ██ ██ ██      ██    ║
+║                                                      ║
+║              ✓  claim · check · ground               ║
+║                                                      ║
+╚══════════════════════════════════════════════════════╝
 </pre>
 
 ### **Stop agents from lying.**
 
-**vet** — claim checker for agent grounding
+**vclaim** — claim checker for agent grounding
 
 Agents (and humans) assert *“tests pass”*, *“status is ok”*, *“diff is clean”* —
-often wrong. **vet** turns those assertions into small, named claims: run a command
+often wrong. **vclaim** turns those assertions into small, named claims: run a command
 or inspect the workspace, get **pass/fail with evidence**. No test harness. No YAML
 framework. Pretty output for humans; **JSONL for agents**.
 
 Ground every *“done”* in a check.
 
 <p>
-  <a href="https://github.com/ousatov-ua/vet/actions/workflows/ci.yml"><img src="https://github.com/ousatov-ua/vet/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/ousatov-ua/vet/actions/workflows/security-check.yml"><img src="https://github.com/ousatov-ua/vet/actions/workflows/security-check.yml/badge.svg" alt="Security Check"></a>
-  <a href="https://github.com/ousatov-ua/vet/releases/latest"><img src="https://img.shields.io/github/v/release/ousatov-ua/vet?label=version&color=0e8a16" alt="Version"></a>
-  <a href="https://github.com/ousatov-ua/vet/releases/latest"><img src="https://img.shields.io/github/release-date/ousatov-ua/vet?label=released" alt="Release date"></a>
+  <a href="https://github.com/ousatov-ua/vclaim/actions/workflows/ci.yml"><img src="https://github.com/ousatov-ua/vclaim/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/ousatov-ua/vclaim/actions/workflows/security-check.yml"><img src="https://github.com/ousatov-ua/vclaim/actions/workflows/security-check.yml/badge.svg" alt="Security Check"></a>
+  <a href="https://github.com/ousatov-ua/vclaim/releases/latest"><img src="https://img.shields.io/github/v/release/ousatov-ua/vclaim?label=version&color=0e8a16" alt="Version"></a>
+  <a href="https://github.com/ousatov-ua/vclaim/releases/latest"><img src="https://img.shields.io/github/release-date/ousatov-ua/vclaim?label=released" alt="Release date"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
-  <a href="https://github.com/ousatov-ua/vet/stargazers"><img src="https://img.shields.io/github/stars/ousatov-ua/vet?style=social" alt="GitHub Stars"></a>
+  <a href="https://github.com/ousatov-ua/vclaim/stargazers"><img src="https://img.shields.io/github/stars/ousatov-ua/vclaim?style=social" alt="GitHub Stars"></a>
 </p>
 
 <p>
@@ -41,20 +40,20 @@ Ground every *“done”* in a check.
   <a href="#claim-kinds-v01">Claims</a>&nbsp;&nbsp;·&nbsp;&nbsp;
   <a href="#how-it-works">How it works</a>&nbsp;&nbsp;·&nbsp;&nbsp;
   <a href="docs/claims.md">Docs</a>&nbsp;&nbsp;·&nbsp;&nbsp;
-  <a href="https://github.com/ousatov-ua/vet/releases/latest">Releases</a>
+  <a href="https://github.com/ousatov-ua/vclaim/releases/latest">Releases</a>
 </p>
 
 </div>
 
 ---
 
-| Without **vet** | With **vet** |
+| Without **vclaim** | With **vclaim** |
 |-----------------|--------------|
-| Agent: *“tests passed”* — maybe? | `vet exit 0 -- cargo test -q`<br>![PASS](docs/assets/pass.svg) `exit 0  (true)` |
-| Agent: *“tests passed”* — they didn’t | `vet exit 0 -- cargo test -q`<br>![FAIL](docs/assets/fail.svg) `exit 0  (exit 101)` |
-| *“Health is fine”* — hand-waved | `vet json '.status == "healthy"' -- curl …`<br>![PASS](docs/assets/pass.svg) `json .status == "healthy"  (matched)` |
-| *“Health is fine”* — path missing | `vet json .status -- curl …`<br>![FAIL](docs/assets/fail.svg) `json .status  (path .status missing)` |
-| *“Repo is clean”* … isn’t | `vet git clean`<br>![FAIL](docs/assets/fail.svg) `git clean  (working tree dirty)` |
+| Agent: *“tests passed”* — maybe? | `vclaim exit 0 -- cargo test -q`<br>![PASS](docs/assets/pass.svg) `exit 0  (true)` |
+| Agent: *“tests passed”* — they didn’t | `vclaim exit 0 -- cargo test -q`<br>![FAIL](docs/assets/fail.svg) `exit 0  (exit 101)` |
+| *“Health is fine”* — hand-waved | `vclaim json '.status == "healthy"' -- curl …`<br>![PASS](docs/assets/pass.svg) `json .status == "healthy"  (matched)` |
+| *“Health is fine”* — path missing | `vclaim json .status -- curl …`<br>![FAIL](docs/assets/fail.svg) `json .status  (path .status missing)` |
+| *“Repo is clean”* … isn’t | `vclaim git clean`<br>![FAIL](docs/assets/fail.svg) `git clean  (working tree dirty)` |
 | Ad-hoc shell in agent loops | Batch claims + `--format jsonl` for tools |
 
 ---
@@ -64,28 +63,28 @@ Ground every *“done”* in a check.
 ### Homebrew
 
 ```bash
-brew tap ousatov-ua/vet
-brew install vet
+brew tap ousatov-ua/vclaim
+brew install vclaim
 ```
 
 ### Prebuilt binaries
 
 Grab the asset for your OS from the
-[latest release](https://github.com/ousatov-ua/vet/releases/latest):
+[latest release](https://github.com/ousatov-ua/vclaim/releases/latest):
 
 | Platform | Asset |
 |----------|--------|
-| Linux (amd64) | `vet-<version>-linux-amd64.tar.gz` |
-| macOS (arm64) | `vet-<version>-darwin-arm64.tar.gz` |
-| Windows (amd64) | `vet-<version>-windows-amd64.zip` |
+| Linux (amd64) | `vclaim-<version>-linux-amd64.tar.gz` |
+| macOS (arm64) | `vclaim-<version>-darwin-arm64.tar.gz` |
+| Windows (amd64) | `vclaim-<version>-windows-amd64.zip` |
 
 ```bash
 # Linux / macOS — unpack and install to PATH
-tar -xzf vet-*-linux-amd64.tar.gz   # or vet-*-darwin-arm64.tar.gz
-install -m 0755 vet ~/.local/bin/vet
+tar -xzf vclaim-*-linux-amd64.tar.gz   # or vclaim-*-darwin-arm64.tar.gz
+install -m 0755 vclaim ~/.local/bin/vclaim
 
 # or with GitHub CLI
-gh release download -R ousatov-ua/vet -p 'vet-*-linux-amd64.tar.gz'
+gh release download -R ousatov-ua/vclaim -p 'vclaim-*-linux-amd64.tar.gz'
 ```
 
 ### From source
@@ -93,7 +92,7 @@ gh release download -R ousatov-ua/vet -p 'vet-*-linux-amd64.tar.gz'
 ```bash
 cargo install --path .
 # or from a clone:
-cargo build --release && cp target/release/vet ~/.local/bin/
+cargo build --release && cp target/release/vclaim ~/.local/bin/
 ```
 
 Requires a Rust toolchain (edition 2021). Runtime needs `git` on `PATH` only for `git` claims.
@@ -101,13 +100,13 @@ Requires a Rust toolchain (edition 2021). Runtime needs `git` on `PATH` only for
 ## Quick start
 
 ```bash
-vet exit 0 -- cargo test -q
-vet json '.status == "healthy"' -- curl -s localhost:8080/health
-vet stdout !contains 'DEPRECATED' -- ./migrate --dry-run
-vet git clean
-vet files exist src/main.rs Cargo.toml
-vet duration lt 30s -- npm test
-vet env set DATABASE_URL
+vclaim exit 0 -- cargo test -q
+vclaim json '.status == "healthy"' -- curl -s localhost:8080/health
+vclaim stdout !contains 'DEPRECATED' -- ./migrate --dry-run
+vclaim git clean
+vclaim files exist src/main.rs Cargo.toml
+vclaim duration lt 30s -- npm test
+vclaim env set DATABASE_URL
 ```
 
 ### What humans see
@@ -116,31 +115,31 @@ On a TTY, verdicts are **colorized** (green pass / red fail). Force color with
 `--color always` (or turn off with `--color never` / `NO_COLOR`).
 
 <p align="center">
-  <img src="docs/assets/human-output.svg" alt="vet terminal output: green PASS or red FAIL, then Log path to full stdout/stderr" width="720">
+  <img src="docs/assets/human-output.svg" alt="vclaim terminal output: green PASS or red FAIL, then Log path to full stdout/stderr" width="720">
 </p>
 
 **OK — claim holds**
 
 ```bash
-$ vet exit 0 -- cargo test -q
+$ vclaim exit 0 -- cargo test -q
 ```
 
 <pre>
 <span style="color:#3fb950;font-weight:700">PASS</span>  exit 0  (true)
 
-Log: /tmp/vet-a1b2c3d4e5f67890.txt
+Log: /tmp/vclaim-a1b2c3d4e5f67890.txt
 </pre>
 
-**NOT OK — claim fails** (non-zero process exit; `vet` itself exits `1`)
+**NOT OK — claim fails** (non-zero process exit; `vclaim` itself exits `1`)
 
 ```bash
-$ vet exit 0 -- cargo test -q
+$ vclaim exit 0 -- cargo test -q
 ```
 
 <pre>
 <span style="color:#f85149;font-weight:700">FAIL</span>  exit 0  (exit 101)
 
-Log: /tmp/vet-a1b2c3d4e5f67890.txt
+Log: /tmp/vclaim-a1b2c3d4e5f67890.txt
 </pre>
 
 More examples:
@@ -150,12 +149,12 @@ More examples:
 <span style="color:#3fb950;font-weight:700">PASS</span>  git clean  (working tree clean)
 <span style="color:#f85149;font-weight:700">FAIL</span>  json .status  (path .status missing)
 
-Log: /tmp/vet-….txt
+Log: /tmp/vclaim-….txt
 </pre>
 
 ### Log file (important)
 
-Terminal lines are a **short pass/fail summary only**. After every run, `vet`
+Terminal lines are a **short pass/fail summary only**. After every run, `vclaim`
 writes the **complete** captured stdout/stderr (plus verdicts) to a unique file
 in the OS temp directory:
 
@@ -165,7 +164,7 @@ in the OS temp directory:
 | macOS | usually `/var/folders/…` or `/tmp` |
 | Windows | `%TEMP%` / `%TMP%` |
 
-Filename pattern: **`vet-<unique-hex>.txt`**.
+Filename pattern: **`vclaim-<unique-hex>.txt`**.
 
 - **Human:** footer prints `Log: <path>`.
 - **JSONL:** last line is `{"log":"<path>"}`
@@ -176,7 +175,7 @@ it is the full record of what was tested, not just the one-line claim result.
 ### Batch / agent mode
 
 ```bash
-vet --format jsonl <<'EOF'
+vclaim --format jsonl <<'EOF'
 exit 0 -- cargo test -q
 json '.ok' -- curl -s "$URL/health"
 git clean
@@ -187,13 +186,13 @@ EOF
 
 | Form | Role |
 |------|------|
-| `vet <claim> -- <cmd…>` | Run command, check claim against result |
-| `vet <claim>` | Workspace/env claims (no command): `git`, `files`, `env` |
-| `vet --format jsonl` | One JSON object per claim (agent default) |
-| `vet --color auto\|always\|never` | Human color (default `auto`: TTY, no `NO_COLOR`) |
-| `vet --timeout 30s …` | Kill command after duration; exit `2` on timeout |
-| `vet -f claims.txt` | Batch claims from file (`-` = stdin) |
-| Log file | Always written under OS temp as `vet-<hex>.txt`; path at end of output |
+| `vclaim <claim> -- <cmd…>` | Run command, check claim against result |
+| `vclaim <claim>` | Workspace/env claims (no command): `git`, `files`, `env` |
+| `vclaim --format jsonl` | One JSON object per claim (agent default) |
+| `vclaim --color auto\|always\|never` | Human color (default `auto`: TTY, no `NO_COLOR`) |
+| `vclaim --timeout 30s …` | Kill command after duration; exit `2` on timeout |
+| `vclaim -f claims.txt` | Batch claims from file (`-` = stdin) |
+| Log file | Always written under OS temp as `vclaim-<hex>.txt`; path at end of output |
 
 No plugins, no YAML test framework, no CI runner. Claims only.
 
@@ -210,19 +209,19 @@ Process exit codes:
 ### `exit` — process status
 
 ```bash
-vet exit 0 -- cargo test -q
-vet exit nonzero -- false
-vet exit 101 -- sh -c 'exit 101'
+vclaim exit 0 -- cargo test -q
+vclaim exit nonzero -- false
+vclaim exit 101 -- sh -c 'exit 101'
 ```
 
 ### `stdout` / `stderr` — stream content
 
 ```bash
-vet stdout contains OK -- ./build
-vet stdout !contains DEPRECATED -- ./migrate --dry-run
-vet stdout equals done -- printf done
-vet stdout matches 'error: .+' -- ./check
-vet stderr contains panic -- ./run
+vclaim stdout contains OK -- ./build
+vclaim stdout !contains DEPRECATED -- ./migrate --dry-run
+vclaim stdout equals done -- printf done
+vclaim stdout matches 'error: .+' -- ./check
+vclaim stderr contains panic -- ./run
 ```
 
 Ops: `contains`, `!contains`, `equals` (one trailing newline stripped), `matches` (Rust regex, unanchored). Invalid regex → exit `2`.
@@ -230,10 +229,10 @@ Ops: `contains`, `!contains`, `equals` (one trailing newline stripped), `matches
 ### `json` — jq-lite path on command stdout
 
 ```bash
-vet json .ok -- curl -s "$URL/health"
-vet json .status exists -- curl -s "$URL/health"
-vet json .status == healthy -- curl -s "$URL/health"
-vet json '.status == "healthy"' -- curl -s "$URL/health"
+vclaim json .ok -- curl -s "$URL/health"
+vclaim json .status exists -- curl -s "$URL/health"
+vclaim json .status == healthy -- curl -s "$URL/health"
+vclaim json '.status == "healthy"' -- curl -s "$URL/health"
 ```
 
 Path language (not full jq):
@@ -255,8 +254,8 @@ Invalid JSON body → **claim fail** (exit `1`), not usage error.
 ### `files` — path existence
 
 ```bash
-vet files exist src/main.rs Cargo.toml
-vet files !exist tmp/scratch
+vclaim files exist src/main.rs Cargo.toml
+vclaim files !exist tmp/scratch
 ```
 
 No command allowed. Paths are relative to the current working directory.
@@ -264,8 +263,8 @@ No command allowed. Paths are relative to the current working directory.
 ### `env` — variable presence
 
 ```bash
-vet env set DATABASE_URL HOME
-vet env !set AWS_SECRET_ACCESS_KEY
+vclaim env set DATABASE_URL HOME
+vclaim env !set AWS_SECRET_ACCESS_KEY
 ```
 
 Empty string counts as **set**. **Values are never printed** in human or JSONL evidence.
@@ -273,8 +272,8 @@ Empty string counts as **set**. **Values are never printed** in human or JSONL e
 ### `git` — working tree
 
 ```bash
-vet git clean
-vet git dirty
+vclaim git clean
+vclaim git dirty
 ```
 
 Uses `git status --porcelain`. Not a git repository → claim **fail** (exit `1`).  
@@ -283,9 +282,9 @@ Git binary missing / status invocation failure → **exit `2`** (cannot evaluate
 ### `duration` — wall clock
 
 ```bash
-vet duration lt 30s -- npm test
-vet duration lt 500ms -- ./fast-check
-vet duration lt 2m -- cargo test
+vclaim duration lt 30s -- npm test
+vclaim duration lt 500ms -- ./fast-check
+vclaim duration lt 2m -- cargo test
 ```
 
 Units: `ms`, `s`, `m`. Comparator in v0.1: **`lt` only**.
@@ -318,9 +317,9 @@ files exist Cargo.toml
 ```
 
 ```bash
-vet -f claims.txt
-vet --format jsonl -f claims.txt
-vet -f - < claims.txt
+vclaim -f claims.txt
+vclaim --format jsonl -f claims.txt
+vclaim -f - < claims.txt
 ```
 
 Blank lines and `#` comments (full-line or mid-line outside quotes) are skipped. Claims run sequentially; claim failures do not stop the batch; parse/spawn/timeout/git-tool errors abort with exit `2`.
@@ -333,7 +332,7 @@ Captured stdout/stderr are capped at 1 MiB per stream.
 |-----|----------|
 | [docs/claims.md](docs/claims.md) | Grammar freeze, edge cases, evidence rules |
 | [docs/json-subset.md](docs/json-subset.md) | jq-lite path language limits |
-| [vet.md](vet.md) | Product pitch and scope |
+| [vclaim.md](vclaim.md) | Product pitch and scope |
 
 ## Develop
 

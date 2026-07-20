@@ -1,4 +1,4 @@
-//! End-to-end CLI tests for `vet`.
+//! End-to-end CLI tests for `vclaim`.
 
 use assert_cmd::cargo::cargo_bin_cmd;
 use assert_cmd::Command;
@@ -8,8 +8,8 @@ use std::path::Path;
 use std::process::Command as StdCommand;
 use tempfile::TempDir;
 
-fn vet() -> Command {
-    cargo_bin_cmd!("vet")
+fn vclaim() -> Command {
+    cargo_bin_cmd!("vclaim")
 }
 
 /// Exit 0 on this platform.
@@ -152,7 +152,7 @@ fn emit_stderr_args(text: &str) -> Vec<String> {
 
 #[test]
 fn exit_zero_pass() {
-    vet()
+    vclaim()
         .args(["exit", "0", "--"]).args(ok_cmd())
         .assert()
         .success()
@@ -161,7 +161,7 @@ fn exit_zero_pass() {
 
 #[test]
 fn full_output_footer_human_and_file_exists() {
-    let assert = vet()
+    let assert = vclaim()
         .args(["--color", "never", "exit", "0", "--"])
         .args(ok_cmd())
         .assert()
@@ -174,18 +174,18 @@ fn full_output_footer_human_and_file_exists() {
         .file_name()
         .and_then(|n| n.to_str())
         .expect("file name");
-    assert!(name.starts_with("vet-"), "name={name}");
+    assert!(name.starts_with("vclaim-"), "name={name}");
     assert!(name.ends_with(".txt"), "name={name}");
     assert!(path.is_file(), "transcript missing: {}", path.display());
     let body = fs::read_to_string(&path).expect("read transcript");
-    assert!(body.contains("vet full output"));
+    assert!(body.contains("vclaim full output"));
     assert!(body.contains("claim: exit 0"));
     let _ = fs::remove_file(&path);
 }
 
 #[test]
 fn full_output_includes_command_streams() {
-    let assert = vet()
+    let assert = vclaim()
         .args(["--color", "never", "stdout", "contains", "unique-marker-42", "--"])
         .args(emit_args("unique-marker-42"))
         .assert()
@@ -201,7 +201,7 @@ fn full_output_includes_command_streams() {
 
 #[test]
 fn full_output_jsonl_footer() {
-    let assert = vet()
+    let assert = vclaim()
         .args(["--format", "jsonl", "exit", "0", "--"])
         .args(ok_cmd())
         .assert()
@@ -230,7 +230,7 @@ fn full_output_jsonl_footer() {
     let path = Path::new(path_str);
     assert!(path.is_file(), "transcript missing: {path_str}");
     let name = path.file_name().and_then(|n| n.to_str()).unwrap();
-    assert!(name.starts_with("vet-") && name.ends_with(".txt"));
+    assert!(name.starts_with("vclaim-") && name.ends_with(".txt"));
     let _ = fs::remove_file(path);
 }
 
@@ -249,7 +249,7 @@ fn extract_log_path(stdout: &str) -> Option<std::path::PathBuf> {
 
 #[test]
 fn exit_zero_fail() {
-    vet()
+    vclaim()
         .args(["exit", "0", "--"]).args(fail_cmd())
         .assert()
         .code(1)
@@ -258,7 +258,7 @@ fn exit_zero_fail() {
 
 #[test]
 fn exit_nonzero_pass() {
-    vet()
+    vclaim()
         .args(["exit", "nonzero", "--"]).args(fail_cmd())
         .assert()
         .success();
@@ -266,7 +266,7 @@ fn exit_nonzero_pass() {
 
 #[test]
 fn exit_nonzero_fail() {
-    vet()
+    vclaim()
         .args(["exit", "nonzero", "--"]).args(ok_cmd())
         .assert()
         .code(1);
@@ -274,7 +274,7 @@ fn exit_nonzero_fail() {
 
 #[test]
 fn exit_custom_code() {
-    vet()
+    vclaim()
         .args(["exit", "2", "--"]).args(exit_code_cmd(2))
         .assert()
         .success();
@@ -282,7 +282,7 @@ fn exit_custom_code() {
 
 #[test]
 fn stdout_contains() {
-    vet()
+    vclaim()
         .args(["stdout", "contains", "hello", "--"]).args(emit_args("hello world"))
         .assert()
         .success();
@@ -290,7 +290,7 @@ fn stdout_contains() {
 
 #[test]
 fn stdout_not_contains() {
-    vet()
+    vclaim()
         .args(["stdout", "!contains", "DEPRECATED", "--"])
         .args(emit_args("all good"))
         .assert()
@@ -299,7 +299,7 @@ fn stdout_not_contains() {
 
 #[test]
 fn stdout_equals() {
-    vet()
+    vclaim()
         .args(["stdout", "equals", "ping", "--"]).args(emit_args("ping"))
         .assert()
         .success();
@@ -307,7 +307,7 @@ fn stdout_equals() {
 
 #[test]
 fn stdout_matches() {
-    vet()
+    vclaim()
         .args(["stdout", "matches", r"[0-9]+", "--"]).args(emit_args("v42"))
         .assert()
         .success();
@@ -315,7 +315,7 @@ fn stdout_matches() {
 
 #[test]
 fn invalid_regex_exit_2() {
-    vet()
+    vclaim()
         .args(["stdout", "matches", "(", "--"]).args(ok_cmd())
         .assert()
         .code(2)
@@ -324,7 +324,7 @@ fn invalid_regex_exit_2() {
 
 #[test]
 fn stderr_contains() {
-    vet()
+    vclaim()
         .args(["stderr", "contains", "boom", "--"])
         .args(emit_stderr_args("boom"))
         .assert()
@@ -333,7 +333,7 @@ fn stderr_contains() {
 
 #[test]
 fn json_equals_status() {
-    vet()
+    vclaim()
         .args(["json", ".status", "==", "healthy", "--"])
         .args(emit_args(r#"{"status":"healthy"}"#))
         .assert()
@@ -342,7 +342,7 @@ fn json_equals_status() {
 
 #[test]
 fn json_single_token_expression() {
-    vet()
+    vclaim()
         .args(["json", r#".status == "healthy""#, "--"])
         .args(emit_args(r#"{"status":"healthy"}"#))
         .assert()
@@ -351,7 +351,7 @@ fn json_single_token_expression() {
 
 #[test]
 fn json_truthy() {
-    vet()
+    vclaim()
         .args(["json", ".ok", "--"]).args(emit_args(r#"{"ok":true}"#))
         .assert()
         .success();
@@ -359,7 +359,7 @@ fn json_truthy() {
 
 #[test]
 fn json_missing_path_fails() {
-    vet()
+    vclaim()
         .args(["json", ".status", "--"]).args(emit_args(r#"{"other":1}"#))
         .assert()
         .code(1)
@@ -368,7 +368,7 @@ fn json_missing_path_fails() {
 
 #[test]
 fn json_invalid_body_fails_claim() {
-    vet()
+    vclaim()
         .args(["json", ".x", "--"]).args(emit_args("not-json"))
         .assert()
         .code(1)
@@ -377,7 +377,7 @@ fn json_invalid_body_fails_claim() {
 
 #[test]
 fn files_exist() {
-    vet()
+    vclaim()
         .args(["files", "exist", "Cargo.toml", "src/main.rs"])
         .assert()
         .success();
@@ -385,7 +385,7 @@ fn files_exist() {
 
 #[test]
 fn files_missing_fails() {
-    vet()
+    vclaim()
         .args(["files", "exist", "no-such-file-xyz"])
         .assert()
         .code(1);
@@ -393,7 +393,7 @@ fn files_missing_fails() {
 
 #[test]
 fn files_not_exist() {
-    vet()
+    vclaim()
         .args(["files", "!exist", "no-such-file-xyz"])
         .assert()
         .success();
@@ -401,7 +401,7 @@ fn files_not_exist() {
 
 #[test]
 fn files_rejects_command() {
-    vet()
+    vclaim()
         .args(["files", "exist", "Cargo.toml", "--"]).args(ok_cmd())
         .assert()
         .code(2);
@@ -409,23 +409,23 @@ fn files_rejects_command() {
 
 #[test]
 fn env_set_path() {
-    vet().args(["env", "set", "PATH"]).assert().success();
+    vclaim().args(["env", "set", "PATH"]).assert().success();
 }
 
 #[test]
 fn env_not_set() {
-    vet()
-        .env_remove("VET_TEST_UNSET_VAR")
-        .args(["env", "!set", "VET_TEST_UNSET_VAR"])
+    vclaim()
+        .env_remove("VCLAIM_TEST_UNSET_VAR")
+        .args(["env", "!set", "VCLAIM_TEST_UNSET_VAR"])
         .assert()
         .success();
 }
 
 #[test]
 fn env_evidence_hides_value() {
-    vet()
-        .env("VET_SECRET", "super-secret-value")
-        .args(["env", "set", "VET_SECRET"])
+    vclaim()
+        .env("VCLAIM_SECRET", "super-secret-value")
+        .args(["env", "set", "VCLAIM_SECRET"])
         .assert()
         .success()
         .stdout(predicate::str::contains("super-secret-value").not());
@@ -451,7 +451,7 @@ fn git_clean_in_temp_repo() {
         .unwrap();
     // empty repo may be dirty if no commits; commit empty tree optional
     // porcelain empty after init with no files → clean
-    vet()
+    vclaim()
         .current_dir(dir.path())
         .args(["git", "clean"])
         .assert()
@@ -467,7 +467,7 @@ fn git_dirty_detects_file() {
         .output()
         .unwrap();
     fs::write(dir.path().join("x.txt"), "x").unwrap();
-    vet()
+    vclaim()
         .current_dir(dir.path())
         .args(["git", "dirty"])
         .assert()
@@ -477,7 +477,7 @@ fn git_dirty_detects_file() {
 #[test]
 fn git_not_repo_claim_fail() {
     let dir = TempDir::new().unwrap();
-    vet()
+    vclaim()
         .current_dir(dir.path())
         .args(["git", "clean"])
         .assert()
@@ -487,7 +487,7 @@ fn git_not_repo_claim_fail() {
 
 #[test]
 fn duration_lt_pass() {
-    vet()
+    vclaim()
         .args(["duration", "lt", "30s", "--"]).args(ok_cmd())
         .assert()
         .success();
@@ -495,7 +495,7 @@ fn duration_lt_pass() {
 
 #[test]
 fn duration_lt_fail() {
-    vet()
+    vclaim()
         .args(["duration", "lt", "1ms", "--"]).args(sleep_args(50))
         .assert()
         .code(1)
@@ -504,7 +504,7 @@ fn duration_lt_fail() {
 
 #[test]
 fn jsonl_format() {
-    vet()
+    vclaim()
         .args(["--format", "jsonl", "exit", "0", "--"]).args(ok_cmd())
         .assert()
         .success()
@@ -525,7 +525,7 @@ fn batch_file_mixed() {
         ),
     )
     .unwrap();
-    vet()
+    vclaim()
         .args(["-f", path.to_str().unwrap(), "--format", "jsonl"])
         .assert()
         .code(1)
@@ -535,7 +535,7 @@ fn batch_file_mixed() {
 
 #[test]
 fn batch_stdin() {
-    vet()
+    vclaim()
         .args(["-f", "-", "--format", "jsonl"])
         .write_stdin(format!(
             "exit 0 -- {}\nexit nonzero -- {}\n",
@@ -548,7 +548,7 @@ fn batch_stdin() {
 
 #[test]
 fn usage_error_no_args() {
-    vet()
+    vclaim()
         .args([] as [&str; 0])
         .assert()
         .code(2)
@@ -557,7 +557,7 @@ fn usage_error_no_args() {
 
 #[test]
 fn command_required() {
-    vet()
+    vclaim()
         .args(["exit", "0"])
         .assert()
         .code(2)
@@ -566,7 +566,7 @@ fn command_required() {
 
 #[test]
 fn spawn_failure_exit_2() {
-    vet()
+    vclaim()
         .args(["exit", "0", "--", "definitely-not-a-binary-xyz"])
         .assert()
         .code(2)
@@ -575,12 +575,12 @@ fn spawn_failure_exit_2() {
 
 #[test]
 fn help_exits_0() {
-    vet().arg("--help").assert().success();
+    vclaim().arg("--help").assert().success();
 }
 
 #[test]
 fn unknown_claim_kind() {
-    vet()
+    vclaim()
         .args(["foobar", "x"])
         .assert()
         .code(2)
@@ -594,7 +594,7 @@ fn script_json_pipeline() {
     let payload = dir.path().join("health.json");
     fs::write(&payload, r#"{"status":"healthy","ok":true}"#).unwrap();
 
-    vet()
+    vclaim()
         .args(["json", ".status", "==", "healthy", "--"])
         .args(cat_args(&payload))
         .assert()
@@ -603,7 +603,7 @@ fn script_json_pipeline() {
 
 #[test]
 fn timeout_kills_command_exit_2() {
-    vet()
+    vclaim()
         .args(["--timeout", "200ms", "exit", "0", "--"]).args(sleep_args(5000))
         .assert()
         .code(2)
@@ -612,7 +612,7 @@ fn timeout_kills_command_exit_2() {
 
 #[test]
 fn color_never_has_no_ansi() {
-    vet()
+    vclaim()
         .args(["--color", "never", "exit", "0", "--"]).args(ok_cmd())
         .assert()
         .success()
@@ -622,7 +622,7 @@ fn color_never_has_no_ansi() {
 
 #[test]
 fn files_after_double_dash_friendly_error() {
-    vet()
+    vclaim()
         .args(["files", "exist", "--", "README.md"])
         .assert()
         .code(2)
@@ -639,7 +639,7 @@ fn batch_mid_line_comment() {
         format!("exit 0 -- {}  # trailing comment\n", ok_cmd_line()),
     )
     .unwrap();
-    vet()
+    vclaim()
         .args(["-f", claims.to_str().unwrap()])
         .assert()
         .success();

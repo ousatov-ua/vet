@@ -1,5 +1,5 @@
 [package]
-name = "vet"
+name = "vclaim"
 version = "0.1.0"
 edition = "2021"
 description = "Claim checker for agent grounding — evaluate named claims, emit evidence"
@@ -7,10 +7,10 @@ license = "MIT"
 readme = "README.md"
 keywords = ["cli", "testing", "claims", "agents", "verification"]
 categories = ["command-line-utilities", "development-tools"]
-repository = "https://github.com/ousatov-ua/vet"
+repository = "https://github.com/ousatov-ua/vclaim"
 
 [[bin]]
-name = "vet"
+name = "vclaim"
 path = "src/main.rs"
 
 [dependencies]

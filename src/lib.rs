@@ -1,4 +1,4 @@
-//! `vet` — claim checker for agent grounding.
+//! `vclaim` — claim checker for agent grounding.
 
 mod claims;
 mod cli;
@@ -14,7 +14,7 @@ pub use claims::{
     FilesClaim, GitClaim, JsonClaim, JsonOp, StreamClaim, StreamKind, StreamOp, Verdict,
 };
 pub use cli::{Cli, ColorChoice, Format};
-pub use error::{ExitCode, Result, VetError};
+pub use error::{ExitCode, Result, VclaimError};
 pub use parse::{parse_batch, parse_line, ClaimJob};
 pub use run::{run_command, run_command_with, RunOptions, RunResult, DEFAULT_OUTPUT_CAP};
 
@@ -56,7 +56,7 @@ where
     let timeout = match parse_timeout_flag(cli.timeout.as_deref()) {
         Ok(t) => t,
         Err(e) => {
-            let _ = writeln!(err, "vet: {e}");
+            let _ = writeln!(err, "vclaim: {e}");
             return ExitCode::Error;
         }
     };
@@ -64,7 +64,7 @@ where
     let jobs = match collect_jobs(&cli) {
         Ok(j) => j,
         Err(e) => {
-            let _ = writeln!(err, "vet: {e}");
+            let _ = writeln!(err, "vclaim: {e}");
             return ExitCode::Error;
         }
     };
@@ -72,7 +72,7 @@ where
     match run_jobs(&jobs, cli.format, color, timeout, out, err) {
         Ok(code) => code,
         Err(e) => {
-            let _ = writeln!(err, "vet: {e}");
+            let _ = writeln!(err, "vclaim: {e}");
             ExitCode::Error
         }
     }
@@ -81,7 +81,7 @@ where
 fn parse_timeout_flag(raw: Option<&str>) -> Result<Option<Duration>> {
     match raw {
         None => Ok(None),
-        Some(s) => parse_duration_token(s).map(Some).map_err(VetError::Usage),
+        Some(s) => parse_duration_token(s).map(Some).map_err(VclaimError::Usage),
     }
 }
 

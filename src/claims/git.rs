@@ -1,7 +1,7 @@
 //! `git` claim: working tree clean/dirty via `git status --porcelain`.
 
 use super::Verdict;
-use crate::error::{Result, VetError};
+use crate::error::{Result, VclaimError};
 use std::process::Command;
 
 /// Claim: `git clean` | `git dirty`.
@@ -50,7 +50,7 @@ impl GitClaim {
             // Environmental fact: claim can still fail against it.
             GitStatus::NotRepo => Ok(Verdict::fail(claim, "not a git repository")),
             // Operational: tool missing or status invocation failed → exit 2.
-            GitStatus::Error(msg) => Err(VetError::Io(format!("git: {msg}"))),
+            GitStatus::Error(msg) => Err(VclaimError::Io(format!("git: {msg}"))),
         }
     }
 }

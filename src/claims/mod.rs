@@ -16,7 +16,7 @@ pub use git::GitClaim;
 pub use json::{JsonClaim, JsonOp};
 pub use stream::{StreamClaim, StreamKind, StreamOp};
 
-use crate::error::{Result, VetError};
+use crate::error::{Result, VclaimError};
 use crate::run::RunResult;
 use serde::Serialize;
 
@@ -134,7 +134,7 @@ pub fn evaluate(claim: &Claim, run: Option<&RunResult>) -> Result<Verdict> {
 
 fn require_run<'a>(claim: &Claim, run: Option<&'a RunResult>) -> Result<&'a RunResult> {
     run.ok_or_else(|| {
-        VetError::Usage(format!(
+        VclaimError::Usage(format!(
             "internal: claim `{}` requires a command result",
             claim.display()
         ))

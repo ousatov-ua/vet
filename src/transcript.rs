@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::claims::Verdict;
-use crate::error::{Result, VetError};
+use crate::error::{Result, VclaimError};
 use crate::run::RunResult;
 
 /// One evaluated job's data for the transcript.
@@ -23,36 +23,36 @@ pub struct TranscriptJob<'a> {
 
 /// Write a full transcript and return its path under the OS temp dir.
 ///
-/// Filename pattern: `vet-<unique-hex>.txt` in [`std::env::temp_dir`].
+/// Filename pattern: `vclaim-<unique-hex>.txt` in [`std::env::temp_dir`].
 pub fn write_transcript(jobs: &[TranscriptJob<'_>]) -> Result<PathBuf> {
     let dir = std::env::temp_dir();
     let mut last_err: Option<std::io::Error> = None;
 
     for attempt in 0u32..32 {
-        let path = dir.join(format!("vet-{}.txt", unique_id(attempt)));
+        let path = dir.join(format!("vclaim-{}.txt", unique_id(attempt)));
         match OpenOptions::new()
             .write(true)
             .create_new(true)
             .open(&path)
         {
             Ok(mut file) => {
-                write_body(&mut file, jobs).map_err(|e| VetError::Io(e.to_string()))?;
-                file.flush().map_err(|e| VetError::Io(e.to_string()))?;
+                write_body(&mut file, jobs).map_err(|e| VclaimError::Io(e.to_string()))?;
+                file.flush().map_err(|e| VclaimError::Io(e.to_string()))?;
                 return Ok(path);
             }
             Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
                 last_err = Some(e);
                 continue;
             }
-            Err(e) => return Err(VetError::Io(e.to_string())),
+            Err(e) => return Err(VclaimError::Io(e.to_string())),
         }
     }
 
-    Err(VetError::Io(
+    Err(VclaimError::Io(
         last_err
             .map(|e| e.to_string())
             .unwrap_or_else(|| {
-                "could not create unique vet transcript in temp directory".into()
+                "could not create unique vclaim transcript in temp directory".into()
             }),
     ))
 }
@@ -76,10 +76,10 @@ fn unique_id(attempt: u32) -> String {
 fn write_body(w: &mut impl Write, jobs: &[TranscriptJob<'_>]) -> std::io::Result<()> {
     writeln!(
         w,
-        "vet full output\n\
+        "vclaim full output\n\
          ===============\n\
          Terminal output shows pass/fail only. This file has complete\n\
-         stdout/stderr of commands tested by vet, plus claim verdicts.\n\
+         stdout/stderr of commands tested by vclaim, plus claim verdicts.\n\
          Humans and agents should read this file for full detail.\n"
     )?;
 
@@ -139,10 +139,10 @@ pub fn write_footer(w: &mut dyn Write, path: &Path, jsonl: bool) -> Result<()> {
         let rec = serde_json::json!({
             "log": path_str,
         });
-        writeln!(w, "{rec}").map_err(|e| VetError::Io(e.to_string()))?;
+        writeln!(w, "{rec}").map_err(|e| VclaimError::Io(e.to_string()))?;
     } else {
-        writeln!(w).map_err(|e| VetError::Io(e.to_string()))?;
-        writeln!(w, "Log: {path_str}").map_err(|e| VetError::Io(e.to_string()))?;
+        writeln!(w).map_err(|e| VclaimError::Io(e.to_string()))?;
+        writeln!(w, "Log: {path_str}").map_err(|e| VclaimError::Io(e.to_string()))?;
     }
     Ok(())
 }
@@ -167,7 +167,7 @@ mod tests {
     }
 
     #[test]
-    fn filename_is_vet_prefix_txt() {
+    fn filename_is_vclaim_prefix_txt() {
         let v = Verdict::pass("exit 0", "exit 0");
         let jobs = [TranscriptJob {
             verdict: &v,
@@ -175,10 +175,10 @@ mod tests {
         }];
         let path = write_transcript(&jobs).expect("write");
         let name = path.file_name().unwrap().to_string_lossy();
-        assert!(name.starts_with("vet-"), "name={name}");
+        assert!(name.starts_with("vclaim-"), "name={name}");
         assert!(name.ends_with(".txt"), "name={name}");
         let body = std::fs::read_to_string(&path).expect("read back");
-        assert!(body.contains("vet full output"));
+        assert!(body.contains("vclaim full output"));
         assert!(body.contains("claim: exit 0"));
         assert!(body.contains("ok: true"));
         let _ = std::fs::remove_file(&path);
@@ -205,21 +205,21 @@ mod tests {
     #[test]
     fn footer_human_mentions_path() {
         let mut buf = Vec::new();
-        let path = PathBuf::from("/tmp/vet-deadbeef.txt");
+        let path = PathBuf::from("/tmp/vclaim-deadbeef.txt");
         write_footer(&mut buf, &path, false).unwrap();
         let s = String::from_utf8(buf).unwrap();
         assert!(s.contains("Log:"));
-        assert!(s.contains("/tmp/vet-deadbeef.txt"));
+        assert!(s.contains("/tmp/vclaim-deadbeef.txt"));
     }
 
     #[test]
     fn footer_jsonl_is_json_with_path() {
         let mut buf = Vec::new();
-        let path = PathBuf::from("/tmp/vet-cafe.txt");
+        let path = PathBuf::from("/tmp/vclaim-cafe.txt");
         write_footer(&mut buf, &path, true).unwrap();
         let s = String::from_utf8(buf).unwrap();
         let v: serde_json::Value = serde_json::from_str(s.trim()).unwrap();
-        assert_eq!(v["log"], "/tmp/vet-cafe.txt");
+        assert_eq!(v["log"], "/tmp/vclaim-cafe.txt");
         assert!(v.get("note").is_none());
     }
 }

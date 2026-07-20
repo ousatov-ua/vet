@@ -1,6 +1,6 @@
 # JSON path subset (jq-lite)
 
-`vet json` is **not** jq. This document lists the supported subset so agents do not assume full jq.
+`vclaim json` is **not** jq. This document lists the supported subset so agents do not assume full jq.
 
 ## Source
 
@@ -77,13 +77,13 @@ Deep equality (`serde_json::Value` equality).
 
 ```bash
 # {"ok": true, "status": "healthy", "n": 1, "items": [{"id": 7}]}
-vet json .ok -- …                    # pass
-vet json .status == healthy -- …     # pass
-vet json .status == "healthy" -- …   # pass (quoted JSON string token)
-vet json .n == 1 -- …                # pass
-vet json .missing -- …               # fail: path missing
-vet json .status exists -- …         # pass
-vet json .items.0.id == 7 -- …       # pass
+vclaim json .ok -- …                    # pass
+vclaim json .status == healthy -- …     # pass
+vclaim json .status == "healthy" -- …   # pass (quoted JSON string token)
+vclaim json .n == 1 -- …                # pass
+vclaim json .missing -- …               # fail: path missing
+vclaim json .status exists -- …         # pass
+vclaim json .items.0.id == 7 -- …       # pass
 ```
 
 ## Evidence strings

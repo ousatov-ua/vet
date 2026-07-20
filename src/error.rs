@@ -3,7 +3,7 @@
 use std::fmt;
 use std::time::Duration;
 
-/// Process exit codes for `vet`.
+/// Process exit codes for `vclaim`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(i32)]
 pub enum ExitCode {
@@ -23,7 +23,7 @@ impl From<ExitCode> for i32 {
 
 /// Fatal errors that stop evaluation (process exit 2).
 #[derive(Debug)]
-pub enum VetError {
+pub enum VclaimError {
     Usage(String),
     Parse(String),
     Spawn {
@@ -38,32 +38,32 @@ pub enum VetError {
     Io(String),
 }
 
-impl fmt::Display for VetError {
+impl fmt::Display for VclaimError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            VetError::Usage(msg) => write!(f, "usage error: {msg}"),
-            VetError::Parse(msg) => write!(f, "parse error: {msg}"),
-            VetError::Spawn { command, source } => {
+            VclaimError::Usage(msg) => write!(f, "usage error: {msg}"),
+            VclaimError::Parse(msg) => write!(f, "parse error: {msg}"),
+            VclaimError::Spawn { command, source } => {
                 write!(f, "failed to spawn `{command}`: {source}")
             }
-            VetError::Timeout { command, limit } => {
+            VclaimError::Timeout { command, limit } => {
                 write!(
                     f,
                     "command timed out after {}ms: `{command}`",
                     limit.as_millis()
                 )
             }
-            VetError::Io(msg) => write!(f, "io error: {msg}"),
+            VclaimError::Io(msg) => write!(f, "io error: {msg}"),
         }
     }
 }
 
-impl std::error::Error for VetError {}
+impl std::error::Error for VclaimError {}
 
-impl From<std::io::Error> for VetError {
+impl From<std::io::Error> for VclaimError {
     fn from(err: std::io::Error) -> Self {
-        VetError::Io(err.to_string())
+        VclaimError::Io(err.to_string())
     }
 }
 
-pub type Result<T> = std::result::Result<T, VetError>;
+pub type Result<T> = std::result::Result<T, VclaimError>;
