@@ -1,11 +1,92 @@
-# vet — claim checker for agent grounding
+<div align="center">
 
-Agents (and humans) assert “tests pass”, “status is ok”, “diff is clean” — often wrong.  
-**vet** runs small, named claims against a command or workspace and returns pass/fail with evidence. No test file required. Pretty output for humans; JSONL for agents.
+<pre>
+╔══════════════════════════════════════════════════════════╗
+║                                                          ║
+║   ██╗   ██╗ ███████╗ ████████╗                           ║
+║   ██║   ██║ ██╔════╝ ╚══██╔══╝                           ║
+║   ██║   ██║ █████╗      ██║                              ║
+║   ╚██╗ ██╔╝ ██╔══╝      ██║                              ║
+║    ╚████╔╝  ███████╗    ██║                              ║
+║     ╚═══╝   ╚══════╝    ╚═╝                              ║
+║                                                          ║
+║          ✓  claim · check · ground                       ║
+║                                                          ║
+╚══════════════════════════════════════════════════════════╝
+</pre>
 
-Stop agents from lying. Ground every “done” in a check.
+### **Stop agents from lying.**
+
+**vet** — claim checker for agent grounding
+
+Agents (and humans) assert *“tests pass”*, *“status is ok”*, *“diff is clean”* —
+often wrong. **vet** turns those assertions into small, named claims: run a command
+or inspect the workspace, get **pass/fail with evidence**. No test harness. No YAML
+framework. Pretty output for humans; **JSONL for agents**.
+
+Ground every *“done”* in a check.
+
+<p>
+  <a href="https://github.com/ousatov-ua/vet/actions/workflows/ci.yml"><img src="https://github.com/ousatov-ua/vet/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/ousatov-ua/vet/actions/workflows/security-check.yml"><img src="https://github.com/ousatov-ua/vet/actions/workflows/security-check.yml/badge.svg" alt="Security Check"></a>
+  <a href="https://github.com/ousatov-ua/vet/releases/latest"><img src="https://img.shields.io/github/v/release/ousatov-ua/vet?label=version&color=0e8a16" alt="Version"></a>
+  <a href="https://github.com/ousatov-ua/vet/releases/latest"><img src="https://img.shields.io/github/release-date/ousatov-ua/vet?label=released" alt="Release date"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
+  <a href="https://github.com/ousatov-ua/vet/stargazers"><img src="https://img.shields.io/github/stars/ousatov-ua/vet?style=social" alt="GitHub Stars"></a>
+</p>
+
+<p>
+  <a href="#install">Install</a>&nbsp;&nbsp;·&nbsp;&nbsp;
+  <a href="#quick-start">Quick start</a>&nbsp;&nbsp;·&nbsp;&nbsp;
+  <a href="#claim-kinds-v01">Claims</a>&nbsp;&nbsp;·&nbsp;&nbsp;
+  <a href="#how-it-works">How it works</a>&nbsp;&nbsp;·&nbsp;&nbsp;
+  <a href="docs/claims.md">Docs</a>&nbsp;&nbsp;·&nbsp;&nbsp;
+  <a href="https://github.com/ousatov-ua/vet/releases/latest">Releases</a>
+</p>
+
+</div>
+
+---
+
+| Without **vet** | With **vet** |
+|-----------------|--------------|
+| Agent says “tests passed” | `vet exit 0 -- cargo test -q` — evidence or fail |
+| “Health is fine” hand-waved | `vet json '.status == "healthy"' -- curl …` |
+| “Repo is clean” … isn’t | `vet git clean` |
+| Ad-hoc shell in agent loops | Batch claims + `--format jsonl` for tools |
+
+---
 
 ## Install
+
+### Homebrew
+
+```bash
+brew tap ousatov-ua/vet
+brew install vet
+```
+
+### Prebuilt binaries
+
+Grab the asset for your OS from the
+[latest release](https://github.com/ousatov-ua/vet/releases/latest):
+
+| Platform | Asset |
+|----------|--------|
+| Linux (amd64) | `vet-<version>-linux-amd64.tar.gz` |
+| macOS (arm64) | `vet-<version>-darwin-arm64.tar.gz` |
+| Windows (amd64) | `vet-<version>-windows-amd64.zip` |
+
+```bash
+# Linux / macOS — unpack and install to PATH
+tar -xzf vet-*-linux-amd64.tar.gz   # or vet-*-darwin-arm64.tar.gz
+install -m 0755 vet ~/.local/bin/vet
+
+# or with GitHub CLI
+gh release download -R ousatov-ua/vet -p 'vet-*-linux-amd64.tar.gz'
+```
+
+### From source
 
 ```bash
 cargo install --path .
