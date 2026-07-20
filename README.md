@@ -64,6 +64,7 @@ Ground every *“done”* in a check.
 
 ```bash
 brew tap ousatov-ua/vclaim
+brew trust --formula ousatov-ua/vclaim/vclaim
 brew install vclaim
 ```
 
