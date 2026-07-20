@@ -116,7 +116,7 @@ On a TTY, verdicts are **colorized** (green pass / red fail). Force color with
 `--color always` (or turn off with `--color never` / `NO_COLOR`).
 
 <p align="center">
-  <img src="docs/assets/human-output.svg" alt="vet terminal output: green PASS when the claim holds, red FAIL with evidence when it does not" width="720">
+  <img src="docs/assets/human-output.svg" alt="vet terminal output: green PASS or red FAIL, then Log path to full stdout/stderr" width="720">
 </p>
 
 **OK — claim holds**
