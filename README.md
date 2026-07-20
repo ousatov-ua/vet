@@ -50,9 +50,11 @@ Ground every *“done”* in a check.
 
 | Without **vet** | With **vet** |
 |-----------------|--------------|
-| Agent says “tests passed” | `vet exit 0 -- cargo test -q` — evidence or fail |
-| “Health is fine” hand-waved | `vet json '.status == "healthy"' -- curl …` |
-| “Repo is clean” … isn’t | `vet git clean` |
+| Agent: *“tests passed”* — maybe? | `vet exit 0 -- cargo test -q`<br>![PASS](docs/assets/pass.svg) `exit 0  (true)` |
+| Agent: *“tests passed”* — they didn’t | `vet exit 0 -- cargo test -q`<br>![FAIL](docs/assets/fail.svg) `exit 0  (exit 101)` |
+| *“Health is fine”* — hand-waved | `vet json '.status == "healthy"' -- curl …`<br>![PASS](docs/assets/pass.svg) `json .status == "healthy"  (matched)` |
+| *“Health is fine”* — path missing | `vet json .status -- curl …`<br>![FAIL](docs/assets/fail.svg) `json .status  (path .status missing)` |
+| *“Repo is clean”* … isn’t | `vet git clean`<br>![FAIL](docs/assets/fail.svg) `git clean  (working tree dirty)` |
 | Ad-hoc shell in agent loops | Batch claims + `--format jsonl` for tools |
 
 ---
@@ -108,7 +110,44 @@ vet duration lt 30s -- npm test
 vet env set DATABASE_URL
 ```
 
-Batch / agent mode:
+### What humans see
+
+On a TTY, verdicts are **colorized** (green pass / red fail). Force color with
+`--color always` (or turn off with `--color never` / `NO_COLOR`).
+
+<p align="center">
+  <img src="docs/assets/human-output.svg" alt="vet terminal output: green PASS when the claim holds, red FAIL with evidence when it does not" width="720">
+</p>
+
+**OK — claim holds**
+
+```bash
+$ vet exit 0 -- cargo test -q
+```
+
+<pre>
+<span style="color:#3fb950;font-weight:700">PASS</span>  exit 0  (true)
+</pre>
+
+**NOT OK — claim fails** (non-zero process exit; `vet` itself exits `1`)
+
+```bash
+$ vet exit 0 -- cargo test -q
+```
+
+<pre>
+<span style="color:#f85149;font-weight:700">FAIL</span>  exit 0  (exit 101)
+</pre>
+
+More examples:
+
+<pre>
+<span style="color:#3fb950;font-weight:700">PASS</span>  stdout contains OK  (matched)
+<span style="color:#3fb950;font-weight:700">PASS</span>  git clean  (working tree clean)
+<span style="color:#f85149;font-weight:700">FAIL</span>  json .status  (path .status missing)
+</pre>
+
+### Batch / agent mode
 
 ```bash
 vet --format jsonl <<'EOF'
@@ -226,12 +265,12 @@ Units: `ms`, `s`, `m`. Comparator in v0.1: **`lt` only**.
 
 ## Output
 
-**Human (default):** green/red mark, claim text, evidence (exit, snippet, path).  
+**Human (default):** green `PASS` / red `FAIL`, claim text, evidence in parentheses.  
 Color: `--color auto` (default) only when stdout is a TTY and `NO_COLOR` is unset; `--color always|never` override.
 
 ```text
-✓ exit 0  (exit 0, 1234ms)
-✗ json .status  (path .status missing, 80ms)
+PASS  exit 0  (true)
+FAIL  json .status  (path .status missing)
 ```
 
 **Agent (`--format jsonl`):** one record per claim:
