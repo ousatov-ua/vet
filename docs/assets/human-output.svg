@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="280" viewBox="0 0 720 280" role="img" aria-label="vet human output: PASS in green, FAIL in red">
+  <defs>
+    <style>
+      .bg { fill: #0d1117; }
+      .chrome { fill: #161b22; stroke: #30363d; stroke-width: 1; }
+      .dot-r { fill: #ff5f56; }
+      .dot-y { fill: #ffbd2e; }
+      .dot-g { fill: #27c93f; }
+      .title { fill: #8b949e; font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+      .prompt { fill: #8b949e; font: 14px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+      .cmd { fill: #e6edf3; font: 14px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+      .pass { fill: #3fb950; font: 700 14px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+      .fail { fill: #f85149; font: 700 14px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+      .body { fill: #e6edf3; font: 14px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+      .muted { fill: #8b949e; font: 14px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+      .label { fill: #c9d1d9; font: 600 11px ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; letter-spacing: 0.04em; }
+    </style>
+  </defs>
+
+  <!-- Window -->
+  <rect class="bg" x="0" y="0" width="720" height="280" rx="12"/>
+  <rect class="chrome" x="0" y="0" width="720" height="36" rx="12"/>
+  <rect class="chrome" x="0" y="24" width="720" height="12"/>
+  <circle class="dot-r" cx="22" cy="18" r="6"/>
+  <circle class="dot-y" cx="42" cy="18" r="6"/>
+  <circle class="dot-g" cx="62" cy="18" r="6"/>
+  <text class="title" x="360" y="22" text-anchor="middle">vet — human output</text>
+
+  <!-- OK block -->
+  <text class="label" x="28" y="64">WHEN THE CLAIM HOLDS</text>
+  <text class="prompt" x="28" y="90">$</text>
+  <text class="cmd" x="44" y="90">vet exit 0 -- cargo test -q</text>
+  <text class="pass" x="28" y="116">PASS</text>
+  <text class="body" x="78" y="116"> exit 0  </text>
+  <text class="muted" x="170" y="116">(true)</text>
+
+  <!-- separator -->
+  <line x1="28" y1="142" x2="692" y2="142" stroke="#21262d" stroke-width="1"/>
+
+  <!-- FAIL block -->
+  <text class="label" x="28" y="170">WHEN THE CLAIM FAILS</text>
+  <text class="prompt" x="28" y="196">$</text>
+  <text class="cmd" x="44" y="196">vet exit 0 -- cargo test -q</text>
+  <text class="fail" x="28" y="222">FAIL</text>
+  <text class="body" x="74" y="222"> exit 0  </text>
+  <text class="muted" x="166" y="222">(exit 101)</text>
+
+  <text class="muted" x="28" y="256">TTY: PASS is green, FAIL is red · --color auto|always|never</text>
+</svg>
